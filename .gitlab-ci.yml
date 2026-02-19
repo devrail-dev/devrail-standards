@@ -1,1 +1,15 @@
-IyBEZWZhdWx0IEMlMjBGUk9NIEdpdExhYiBDSSBQaXBlbGluZQoKc3RhZ2VzOgogIC0gc2VjcmV0CgpzZWNyZXRfZGV0ZWN0aW9uOgogIHN0YWdlOiBzZWNyZXQKICB0YWdzOgogICAgLSBkb2NrZXIKICBzY3JpcHQ6CiAgICAtIGVjaG8gIlNlY3JldCBkZXRlY3Rpb24gcnVubmluZyIKICBydWxlczoKICAgIC0gaWY6ICRDT19QSVBFTElORV9TT1VSQ0UgPT0gIm1lcmdlX3JlcXVlc3RfZXZlbnQiCiAgICAtIGlmOiAkQ0lfQ09NTUlUX0JSQU5DSCA9PSAkQ0lfREVGQVVMVF9CUkFOQ0gKICBhbGxvd190cmlnZ2VyOiB0cnVlCg==
+# Default C%20FROM GitLab CI Pipeline
+
+stages:
+  - secret
+
+secret_detection:
+  stage: secret
+  tags:
+    - docker
+  script:
+    - echo "Secret detection running"
+  rules:
+    - if: $CO_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+  allow_trigger: true
