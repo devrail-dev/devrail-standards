@@ -10,6 +10,6 @@ secret_detection:
   script:
     - echo "Secret detection running"
   rules:
-    - if: $CO_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
-  allow_trigger: true
+
