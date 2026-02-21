@@ -1,0 +1,62 @@
+# .gitlab-ci.yml — DevRail CI pipeline
+# Runs parallel check jobs using the dev-toolchain container.
+# Each job matches a Makefile target for consistent local/CI behavior.
+#
+# Prerequisites:
+#   Enable "Pipelines must succeed" in Settings > General > Merge requests
+#   to block MRs when any job fails.
+
+image: ghcr.io/devrail-dev/dev-toolchain:v1
+
+stages:
+  - check
+
+lint:
+  stage: check
+  script:
+    - make _lint
+  artifacts:
+    paths:
+      - .devrail-output/
+    expire_in: 1 week
+    when: always
+
+format:
+  stage: check
+  script:
+    - make _format
+  artifacts:
+    paths:
+      - .devrail-output/
+    expire_in: 1 week
+    when: always
+
+security:
+  stage: check
+  script:
+    - make _security
+  artifacts:
+    paths:
+      - .devrail-output/
+    expire_in: 1 week
+    when: always
+
+test:
+  stage: check
+  script:
+    - make _test
+  artifacts:
+    paths:
+      - .devrail-output/
+    expire_in: 1 week
+    when: always
+
+docs:
+  stage: check
+  script:
+    - make _docs
+  artifacts:
+    paths:
+      - .devrail-output/
+    expire_in: 1 week
+    when: always

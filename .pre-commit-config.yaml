@@ -1,0 +1,35 @@
+# .pre-commit-config.yaml — DevRail standards repo (dogfooding)
+# This repo is primarily Markdown and YAML with a Makefile.
+
+repos:
+  # --- Conventional Commits ---
+  - repo: https://github.com/devrail-dev/pre-commit-conventional-commits
+    rev: v1.0.0
+    hooks:
+      - id: conventional-commits
+
+  # --- Secret Detection ---
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.21.2
+    hooks:
+      - id: gitleaks
+
+  # --- Common file checks ---
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-merge-conflict
+      - id: check-added-large-files
+
+  # --- Markdown linting ---
+  - repo: https://github.com/igorshubovych/markdownlint-cli
+    rev: v0.43.0
+    hooks:
+      - id: markdownlint
+        args: ["--disable", "MD013", "MD033", "MD041", "--"]
+        # MD013: Line length (disabled -- not enforced for documentation repos)
+        # MD033: Inline HTML (disabled -- devrail markers use HTML comments)
+        # MD041: First line heading (disabled -- some files have frontmatter)

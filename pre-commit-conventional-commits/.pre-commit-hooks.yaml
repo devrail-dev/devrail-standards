@@ -1,0 +1,8 @@
+- id: conventional-commits
+  name: Conventional Commits
+  description: Enforce conventional commit message format with DevRail types and scopes
+  entry: conventional-commits-check
+  language: python
+  stages: [commit-msg]
+  always_run: true
+  minimum_pre_commit_version: "3.0.0"

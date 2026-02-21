@@ -1,0 +1,7 @@
+# .devrail.yml — DevRail project configuration
+# Pre-commit conventional commits hook (Python)
+languages:
+  - python
+
+fail_fast: false
+log_format: json

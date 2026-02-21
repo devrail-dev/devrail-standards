@@ -1,0 +1,97 @@
+# .pre-commit-config.yaml — DevRail pre-commit hooks
+#
+# Fast-local hooks only. Full scanning runs in CI via `make check`.
+#
+# Hook strategy: All language hooks are included. Hooks that match no staged
+# files have zero runtime cost. This eliminates the need for a config-generation
+# step based on .devrail.yml — hooks naturally only fire for matching file types.
+#
+# Performance budget: All hooks must complete within 30 seconds total on a
+# typical changeset (< 50 files).
+#
+# Fast-local vs slow-CI split:
+#   LOCAL (this file):  ruff, shellcheck, shfmt, terraform fmt, tflint,
+#                       ansible-lint, conventional-commits, gitleaks, terraform-docs
+#   CI ONLY (make check): bandit, semgrep, tfsec, checkov, pytest, bats,
+#                         terratest, trivy, molecule
+
+repos:
+  # --- Conventional Commits (Story 4.1) ---
+  # Validates commit message format: type(scope): description
+  # Runs on commit-msg stage, not pre-commit stage
+  - repo: https://github.com/devrail-dev/pre-commit-conventional-commits
+    rev: v1.0.0
+    hooks:
+      - id: conventional-commits
+
+  # --- Python: ruff lint + format (Story 4.2) ---
+  # Ruff replaces flake8, isort, and black in a single tool.
+  # Typically < 1 second for staged files.
+  # Triggers on: .py files (declared via types_or: [python])
+  # .devrail.yml language: python
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.8.6
+    hooks:
+      - id: ruff
+        name: ruff check
+      - id: ruff-format
+        name: ruff format check
+        args: [--check]
+
+  # --- Bash: shellcheck (Story 4.2) ---
+  # Static analysis for shell scripts.
+  # Triggers on: shell scripts (types: [shell])
+  # .devrail.yml language: bash
+  - repo: https://github.com/shellcheck-py/shellcheck-py
+    rev: v0.10.0.1
+    hooks:
+      - id: shellcheck
+
+  # --- Bash: shfmt (Story 4.2) ---
+  # Consistent formatting for shell scripts.
+  # Triggers on: shell scripts (types: [shell])
+  # .devrail.yml language: bash
+  - repo: https://github.com/scop/pre-commit-shfmt
+    rev: v3.10.0-1
+    hooks:
+      - id: shfmt
+        args: [--diff]
+
+  # --- Terraform: fmt + tflint + docs (Stories 4.2, 4.3) ---
+  # terraform_fmt: Canonical formatting for .tf files
+  # terraform_tflint: Terraform-specific linting rules
+  # terraform_docs: Auto-generates README with inputs/outputs/resources
+  # Triggers on: .tf files
+  # .devrail.yml language: terraform
+  - repo: https://github.com/antonbabenko/pre-commit-terraform
+    rev: v1.96.3
+    hooks:
+      - id: terraform_fmt
+      - id: terraform_tflint
+      - id: terraform_docs
+        args:
+          - --hook-config=--path-to-file=README.md
+          - --hook-config=--add-to-existing-file=true
+
+  # --- Ansible: lint (Story 4.2) ---
+  # Playbook and role linting.
+  # Triggers on: Ansible YAML files (playbooks, roles, tasks)
+  # .devrail.yml language: ansible
+  - repo: https://github.com/ansible/ansible-lint
+    rev: v24.12.2
+    hooks:
+      - id: ansible-lint
+
+  # --- Secrets: gitleaks (Story 4.3) ---
+  # Scans staged files for secrets, API keys, and credentials.
+  # Runs on EVERY commit regardless of language — secrets can appear in any file.
+  # This is on the local side of the fast-local / slow-CI split because once a
+  # secret is pushed, the damage is done.
+  #
+  # False positive handling:
+  #   - Create .gitleaksignore in repo root with SHA hashes of allowed findings
+  #   - Or use inline `# gitleaks:allow` comment on the line with the false positive
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.21.2
+    hooks:
+      - id: gitleaks
