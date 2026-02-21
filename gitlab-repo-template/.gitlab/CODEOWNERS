@@ -1,0 +1,14 @@
+# .gitlab/CODEOWNERS
+# GitLab Code Owners file
+# Docs: https://docs.gitlab.com/ee/user/project/codeowners/
+#
+# Each line defines a file pattern and the users/groups responsible.
+# The last matching pattern takes precedence.
+#
+# Examples:
+# * @default-team
+# Makefile @devops-team
+# .gitlab-ci.yml @devops-team
+# .devrail.yml @devops-team
+# *.py @python-team
+# *.tf @infra-team

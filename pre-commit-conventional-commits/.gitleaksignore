@@ -1,0 +1,14 @@
+# .gitleaksignore — Gitleaks false positive allowlist
+#
+# Add SHA hashes of allowed findings to suppress false positives.
+# Each line is a finding fingerprint (SHA hash) from gitleaks output.
+#
+# To get the fingerprint of a finding, run:
+#   gitleaks detect --report-format json --report-path /dev/stdout
+#
+# Then copy the "Fingerprint" value for the finding you want to allow.
+#
+# Alternatively, use inline comments in the source file:
+#   some_value = "not-a-secret"  # gitleaks:allow
+#
+# See: https://github.com/gitleaks/gitleaks#configuration

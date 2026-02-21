@@ -1,0 +1,20 @@
+# Hugo build output
+public/
+resources/
+
+# Go module cache
+go.sum.bak
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor files
+*.swp
+*.swo
+*~
+.idea/
+.vscode/
+
+# Hugo temporary files
+.hugo_build.lock

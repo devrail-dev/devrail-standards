@@ -1,0 +1,7 @@
+# .devrail.yml — DevRail project configuration
+# This is the devrail-standards repo (Markdown and YAML documentation).
+# No language-specific tooling applies.
+languages: []
+
+fail_fast: false
+log_format: json

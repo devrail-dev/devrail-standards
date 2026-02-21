@@ -1,0 +1,8 @@
+# .devrail.yml — DevRail project configuration
+# This is a documentation site (Hugo + Markdown), not a code project.
+# No language-specific tools apply; standards are enforced via editorconfig
+# and Hugo build validation.
+languages: []
+
+fail_fast: false
+log_format: json

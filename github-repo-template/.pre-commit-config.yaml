@@ -1,0 +1,56 @@
+# .pre-commit-config.yaml — DevRail pre-commit hooks
+# Install: make install-hooks
+# Docs: https://pre-commit.com/
+
+repos:
+  # --- Conventional Commits ---
+  # Enforces type(scope): description format on commit messages
+  - repo: https://github.com/devrail-dev/pre-commit-conventional-commits
+    rev: v1.0.0
+    hooks:
+      - id: conventional-commits
+
+  # --- Python (uncomment if languages includes python) ---
+  # Linting and formatting with ruff — fast, unified Python tooling
+  # - repo: https://github.com/astral-sh/ruff-pre-commit
+  #   rev: v0.9.7
+  #   hooks:
+  #     - id: ruff
+  #       args: [--fix]
+  #     - id: ruff-format
+
+  # --- Bash (uncomment if languages includes bash) ---
+  # Static analysis for shell scripts
+  # - repo: https://github.com/shellcheck-py/shellcheck-py
+  #   rev: v0.10.0.1
+  #   hooks:
+  #     - id: shellcheck
+  # Consistent shell script formatting
+  # - repo: https://github.com/scop/pre-commit-shfmt
+  #   rev: v3.9.0-1
+  #   hooks:
+  #     - id: shfmt
+  #       args: [--diff]
+
+  # --- Terraform (uncomment if languages includes terraform) ---
+  # Terraform formatting and linting
+  # - repo: https://github.com/antonbabenko/pre-commit-terraform
+  #   rev: v1.96.3
+  #   hooks:
+  #     - id: terraform_fmt
+  #     - id: terraform_tflint
+
+  # --- Secret Detection ---
+  # Detects hardcoded secrets, API keys, and credentials in code
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.22.1
+    hooks:
+      - id: gitleaks
+
+  # --- Terraform Docs (uncomment if languages includes terraform) ---
+  # Auto-generates README documentation for Terraform modules
+  # - repo: https://github.com/terraform-docs/terraform-docs
+  #   rev: v0.19.0
+  #   hooks:
+  #     - id: terraform-docs-go
+  #       args: [--output-file, README.md]
