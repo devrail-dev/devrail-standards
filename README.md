@@ -1,5 +1,7 @@
 # devrail-standards
 
+> **Beta** -- DevRail is under active development. Standards, tooling, and documentation may change without notice. See [STABILITY.md](STABILITY.md) for details.
+
 Opinionated development standards for teams that ship with AI agents.
 
 <!-- badges-start -->
@@ -45,6 +47,16 @@ The `standards/` directory contains the canonical reference documents for all De
 | [terraform.md](standards/terraform.md) | Terraform tooling standards (tflint, tfsec, checkov, terraform-docs) |
 | [ansible.md](standards/ansible.md) | Ansible tooling standards (ansible-lint, molecule) |
 | [universal.md](standards/universal.md) | Universal security tools (trivy, gitleaks) |
+| [coding-practices.md](standards/coding-practices.md) | General coding principles, naming, error handling, testing, and dependencies |
+| [git-workflow.md](standards/git-workflow.md) | Branch strategy, pull requests, code review, merge policy, and git security |
+| [release-versioning.md](standards/release-versioning.md) | Semantic versioning, tagging, release process, hotfixes, and changelogs |
+| [ci-cd-pipelines.md](standards/ci-cd-pipelines.md) | Pipeline structure, stage contracts, deployment gates, and artifact management |
+| [container-standards.md](standards/container-standards.md) | Base images, multi-stage builds, security, image tagging, and health checks |
+| [secrets-management.md](standards/secrets-management.md) | Secret classification, storage, rotation, access control, and CI/CD secrets |
+| [api-cli-design.md](standards/api-cli-design.md) | API versioning, error responses, CLI conventions, and backward compatibility |
+| [monitoring-observability.md](standards/monitoring-observability.md) | Health checks, structured logging, metrics, alerting, and dashboards |
+| [incident-response.md](standards/incident-response.md) | Severity levels, incident workflow, post-mortems, runbooks, and on-call |
+| [data-handling.md](standards/data-handling.md) | Data classification, PII handling, retention, encryption, and compliance |
 | [agent-instructions.md](standards/agent-instructions.md) | AI agent instruction file strategy and hybrid shim pattern |
 | [contributing-a-language.md](standards/contributing-a-language.md) | Step-by-step guide for adding a new language ecosystem |
 
