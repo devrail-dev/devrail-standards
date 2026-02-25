@@ -1,5 +1,7 @@
 # devrail-standards
 
+> **Beta** -- DevRail is under active development. Standards, tooling, and documentation may change without notice. See [STABILITY.md](STABILITY.md) for details.
+
 Opinionated development standards for teams that ship with AI agents.
 
 <!-- badges-start -->
