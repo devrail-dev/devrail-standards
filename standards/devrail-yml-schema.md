@@ -20,7 +20,7 @@ This document defines the complete schema for `.devrail.yml`, the project config
 
 **Description:** Declares which languages are used in the project. This list drives which linters, formatters, security scanners, and test runners are executed by Makefile targets and CI jobs.
 
-**Allowed values:** `python`, `bash`, `terraform`, `ansible`
+**Allowed values:** `python`, `bash`, `terraform`, `ansible`, `ruby`
 
 **Validation rules:**
 - Must be a non-empty list
@@ -185,7 +185,31 @@ terraform:
   docs: terraform-docs
 ```
 
-### Full Four-Language Project
+### Single-Language Project (Ruby on Rails)
+
+A Rails project using Ruby defaults:
+
+```yaml
+# .devrail.yml — Ruby on Rails project
+languages:
+  - ruby
+
+fail_fast: false
+log_format: json
+
+ruby:
+  linter:
+    - rubocop
+    - reek
+  formatter: rubocop
+  security:
+    - brakeman
+    - bundler-audit
+  test: rspec
+  type_check: sorbet
+```
+
+### Full Five-Language Project
 
 A project using all supported languages:
 
@@ -196,6 +220,7 @@ languages:
   - bash
   - terraform
   - ansible
+  - ruby
 
 fail_fast: true
 log_format: json
@@ -217,21 +242,32 @@ terraform:
     - checkov
   test: terratest
   docs: terraform-docs
+
+ruby:
+  linter:
+    - rubocop
+    - reek
+  formatter: rubocop
+  security:
+    - brakeman
+    - bundler-audit
+  test: rspec
+  type_check: sorbet
 ```
 
 ## Language Support Matrix
 
 The following table shows the default tool for each concern per language. These are the tools included in the `dev-toolchain` container.
 
-| Concern | Python | Bash | Terraform | Ansible |
-|---|---|---|---|---|
-| Linter | ruff | shellcheck | tflint | ansible-lint |
-| Formatter | ruff format | shfmt | terraform fmt | -- |
-| Security | bandit, semgrep | -- | tfsec, checkov | -- |
-| Tests | pytest | bats | terratest | molecule |
-| Type Check | mypy | -- | -- | -- |
-| Docs | -- | -- | terraform-docs | -- |
-| Universal | trivy, gitleaks | trivy, gitleaks | trivy, gitleaks | trivy, gitleaks |
+| Concern | Python | Bash | Terraform | Ansible | Ruby |
+|---|---|---|---|---|---|
+| Linter | ruff | shellcheck | tflint | ansible-lint | rubocop, reek |
+| Formatter | ruff format | shfmt | terraform fmt | -- | rubocop |
+| Security | bandit, semgrep | -- | tfsec, checkov | -- | brakeman, bundler-audit |
+| Tests | pytest | bats | terratest | molecule | rspec |
+| Type Check | mypy | -- | -- | -- | sorbet |
+| Docs | -- | -- | terraform-docs | -- | -- |
+| Universal | trivy, gitleaks | trivy, gitleaks | trivy, gitleaks | trivy, gitleaks | trivy, gitleaks |
 
 **Notes:**
 - "Universal" tools run for all languages and are not language-specific overrides
