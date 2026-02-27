@@ -46,6 +46,7 @@ The `standards/` directory contains the canonical reference documents for all De
 | [bash.md](standards/bash.md) | Bash tooling standards (shellcheck, shfmt, bats) |
 | [terraform.md](standards/terraform.md) | Terraform tooling standards (tflint, tfsec, checkov, terraform-docs) |
 | [ansible.md](standards/ansible.md) | Ansible tooling standards (ansible-lint, molecule) |
+| [ruby.md](standards/ruby.md) | Ruby tooling standards (rubocop, brakeman, bundler-audit, rspec, reek, sorbet) |
 | [universal.md](standards/universal.md) | Universal security tools (trivy, gitleaks) |
 | [coding-practices.md](standards/coding-practices.md) | General coding principles, naming, error handling, testing, and dependencies |
 | [git-workflow.md](standards/git-workflow.md) | Branch strategy, pull requests, code review, merge policy, and git security |
