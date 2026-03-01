@@ -1,13 +1,13 @@
 # Stability
 
-DevRail is in **beta** (`v0.x`). The project is under active development.
+DevRail has reached **v1.0** across all repositories. The core standards, toolchain, templates, and documentation are stable and in production use.
 
-## What "Beta" Means
+## What "v1.0" Means
 
-- **Standards may change.** Section content, naming, and structure may be revised as we learn from real-world usage.
-- **Tooling may change.** Tool versions, container contents, and Makefile targets may be updated without prior deprecation.
-- **No backward-compatibility guarantee.** Until `v1.0.0`, any release may include breaking changes. Pin to a specific tag if you need stability.
-- **Feedback is welcome.** File issues, open discussions, or submit PRs. Early adopters shape the final product.
+- **Backward compatibility.** Breaking changes require a major version bump (`v2.0.0`). Minor and patch releases are additive.
+- **Stable interfaces.** Makefile targets, `.devrail.yml` schema, and CLI behavior are committed contracts.
+- **New languages are additive.** Adding a language ecosystem is a minor version bump — existing languages and behavior are unaffected.
+- **Feedback is welcome.** File issues, open discussions, or submit PRs.
 
 ## Component Status
 
@@ -15,9 +15,7 @@ For the full component-by-component status table, see the [dev-toolchain STABILI
 
 ## Versioning
 
-All DevRail repos use `v0.x.y` during beta. The `0.x` range signals that breaking changes may occur in any release, per [Semantic Versioning](https://semver.org/) conventions.
-
-Once the core standards, toolchain image, and CI templates are stable and validated in production use, we will release `v1.0.0` and commit to backward compatibility.
+All DevRail repos follow [Semantic Versioning](https://semver.org/). The container image uses a floating major tag (`:v1`) that always points to the latest `v1.x.x` release. Pin to a specific tag (e.g., `:v1.4.0`) if you need exact reproducibility.
 
 ## How to Track Changes
 
