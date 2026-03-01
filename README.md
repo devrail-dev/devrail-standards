@@ -48,6 +48,7 @@ The `standards/` directory contains the canonical reference documents for all De
 | [ansible.md](standards/ansible.md) | Ansible tooling standards (ansible-lint, molecule) |
 | [ruby.md](standards/ruby.md) | Ruby tooling standards (rubocop, brakeman, bundler-audit, rspec, reek, sorbet) |
 | [go.md](standards/go.md) | Go tooling standards (golangci-lint, gofumpt, govulncheck, go test) |
+| [javascript.md](standards/javascript.md) | JavaScript/TypeScript tooling standards (eslint, prettier, npm audit, vitest, tsc) |
 | [universal.md](standards/universal.md) | Universal security tools (trivy, gitleaks) |
 | [coding-practices.md](standards/coding-practices.md) | General coding principles, naming, error handling, testing, and dependencies |
 | [git-workflow.md](standards/git-workflow.md) | Branch strategy, pull requests, code review, merge policy, and git security |
