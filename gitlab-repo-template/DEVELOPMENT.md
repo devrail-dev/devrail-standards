@@ -264,9 +264,12 @@ type(scope): description
 | Scope | Applies To |
 |---|---|
 | `python` | Python tooling, configs, or standards |
-| `terraform` | Terraform tooling, configs, or standards |
 | `bash` | Bash tooling, configs, or standards |
+| `terraform` | Terraform tooling, configs, or standards |
 | `ansible` | Ansible tooling, configs, or standards |
+| `ruby` | Ruby tooling, configs, or standards |
+| `go` | Go tooling, configs, or standards |
+| `javascript` | JavaScript/TypeScript tooling, configs, or standards |
 | `container` | Dev-toolchain container image |
 | `ci` | CI/CD pipeline configuration |
 | `makefile` | Makefile targets and patterns |
