@@ -8,7 +8,7 @@ description: "Step-by-step guide for adding a new language ecosystem to DevRail.
 Adding a new language to DevRail involves changes across multiple repositories. This guide walks through the complete process.
 
 {{% alert title="Canonical Reference" color="info" %}}
-The authoritative, detailed version of this guide with full code templates and concrete examples lives in the `devrail-standards` repo at [`standards/contributing-a-language.md`](https://github.com/devrail-dev/devrail-standards/blob/main/standards/contributing-a-language.md). This page provides the overview; the canonical guide provides copy-pasteable templates for every step.
+The authoritative, detailed version of this guide with full code templates and concrete examples lives in the `devrail-standards` repo at [`standards/contributing.md`](https://github.com/devrail-dev/devrail-standards/blob/main/standards/contributing.md). This page provides the overview; the canonical guide provides copy-pasteable templates for every step.
 {{% /alert %}}
 
 ## Overview

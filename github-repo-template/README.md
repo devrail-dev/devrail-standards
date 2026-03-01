@@ -6,7 +6,8 @@ A new project bootstrapped from the [DevRail GitHub template](https://github.com
 
 <!-- badges-start -->
 <!-- TODO: Add CI status badge: ![Lint](https://github.com/OWNER/REPO/actions/workflows/lint.yml/badge.svg) -->
-<!-- TODO: Add license badge: ![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg) -->
+[![DevRail compliant](https://devrail.dev/images/badge.svg)](https://devrail.dev)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 <!-- badges-end -->
 
 ## Quick Start
@@ -71,7 +72,7 @@ This repo is configured as a GitHub template. To enable this on your fork:
 
 See [DEVELOPMENT.md](DEVELOPMENT.md) for development standards, coding conventions, and contribution guidelines.
 
-To add a new language ecosystem to DevRail, see the [Contributing a New Language Ecosystem](https://github.com/devrail-dev/devrail-standards/blob/main/standards/contributing-a-language.md) guide.
+To add a new language ecosystem to DevRail, see the [Contributing to DevRail](https://github.com/devrail-dev/devrail-standards/blob/main/standards/contributing.md) guide.
 
 This project follows [Conventional Commits](https://www.conventionalcommits.org/). All commits use the `type(scope): description` format.
 

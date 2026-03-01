@@ -35,7 +35,7 @@ fail_fast: false
 log_format: json
 ```
 
-Supported languages: `python`, `bash`, `terraform`, `ansible`. List only the languages your project actually uses.
+Supported languages: `python`, `bash`, `terraform`, `ansible`, `ruby`, `go`, `javascript`. List only the languages your project actually uses.
 
 ### Step 3: Install Pre-Commit Hooks
 
