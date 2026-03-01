@@ -35,7 +35,7 @@ This site uses Hugo with the [Docsy](https://www.docsy.dev/) theme via Go module
 
 See [DEVELOPMENT.md](DEVELOPMENT.md) for development standards and contribution guidelines.
 
-To add a new language ecosystem to DevRail, see the [Contributing a New Language Ecosystem](../standards/contributing-a-language.md) guide.
+To add a new language ecosystem to DevRail, see the [Contributing to DevRail](../standards/contributing.md) guide.
 
 ## License
 

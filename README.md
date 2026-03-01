@@ -5,9 +5,8 @@
 Opinionated development standards for teams that ship with AI agents.
 
 <!-- badges-start -->
-<!-- TODO: Add CI status badge when CI pipeline is configured -->
-<!-- TODO: Add license badge (MIT) -->
-<!-- TODO: Add version/release badge -->
+[![DevRail compliant](https://devrail.dev/images/badge.svg)](https://devrail.dev)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 <!-- badges-end -->
 
 ## Quick Start
@@ -61,7 +60,7 @@ The `standards/` directory contains the canonical reference documents for all De
 | [incident-response.md](standards/incident-response.md) | Severity levels, incident workflow, post-mortems, runbooks, and on-call |
 | [data-handling.md](standards/data-handling.md) | Data classification, PII handling, retention, encryption, and compliance |
 | [agent-instructions.md](standards/agent-instructions.md) | AI agent instruction file strategy and hybrid shim pattern |
-| [contributing-a-language.md](standards/contributing-a-language.md) | Step-by-step guide for adding a new language ecosystem |
+| [contributing.md](standards/contributing.md) | Contribution guide: general workflow and adding new language ecosystems |
 
 ## Configuration
 
@@ -82,7 +81,7 @@ See [standards/devrail-yml-schema.md](standards/devrail-yml-schema.md) for the c
 
 See [DEVELOPMENT.md](DEVELOPMENT.md) for development standards, coding conventions, and contribution guidelines.
 
-To add a new language ecosystem to DevRail, see [Contributing a New Language Ecosystem](standards/contributing-a-language.md).
+To add a new language ecosystem to DevRail, see [Contributing to DevRail](standards/contributing.md).
 
 This project follows [Conventional Commits](https://www.conventionalcommits.org/). All commits use the `type(scope): description` format.
 

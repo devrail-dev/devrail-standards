@@ -23,6 +23,8 @@ All other tools (linters, formatters, security scanners, test runners) are pre-i
 
 - **[New Project](/docs/getting-started/new-project/)** -- Start a new repository from a DevRail template. All configuration files are pre-set.
 - **[Retrofit Existing Project](/docs/getting-started/retrofit/)** -- Add DevRail standards to a repository you already have.
+- **[Working with AI Agents](/docs/getting-started/agents/)** -- Get AI coding agents to follow DevRail standards in your projects.
+- **[Compliance Badge](/docs/getting-started/badge/)** -- Add a DevRail compliance badge to your README.
 
 ## Verify Your Setup
 

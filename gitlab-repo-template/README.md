@@ -4,6 +4,7 @@
 
 <!-- TODO: Replace badge URLs with actual project paths -->
 [![pipeline status](https://gitlab.com/NAMESPACE/PROJECT/badges/main/pipeline.svg)](https://gitlab.com/NAMESPACE/PROJECT/-/commits/main)
+[![DevRail compliant](https://devrail.dev/images/badge.svg)](https://devrail.dev)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 ## Quick Start
@@ -74,7 +75,7 @@ Formatting rules (indent style, line endings, trailing whitespace) are defined i
 
 ## Contributing
 
-See [DEVELOPMENT.md](DEVELOPMENT.md) for the complete development standards. To add a new language ecosystem to DevRail, see the [Contributing a New Language Ecosystem](https://github.com/devrail-dev/devrail-standards/blob/main/standards/contributing-a-language.md) guide.
+See [DEVELOPMENT.md](DEVELOPMENT.md) for the complete development standards. To add a new language ecosystem to DevRail, see the [Contributing to DevRail](https://github.com/devrail-dev/devrail-standards/blob/main/standards/contributing.md) guide.
 
 This section covers:
 

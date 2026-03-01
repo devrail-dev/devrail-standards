@@ -438,10 +438,10 @@ for i in "${!REPOS[@]}"; do
 done
 
 # Check that contribution guide exists
-if [[ -f "${PROJECT_ROOT}/standards/contributing-a-language.md" ]]; then
-  pass "devrail-standards: standards/contributing-a-language.md exists"
+if [[ -f "${PROJECT_ROOT}/standards/contributing.md" ]]; then
+  pass "devrail-standards: standards/contributing.md exists"
 else
-  fail "devrail-standards: standards/contributing-a-language.md MISSING"
+  fail "devrail-standards: standards/contributing.md MISSING"
 fi
 
 # =========================================================================

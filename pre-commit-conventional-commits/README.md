@@ -91,7 +91,7 @@ This hook requires no configuration. Types and scopes are enforced globally per 
 
 See [DEVELOPMENT.md](DEVELOPMENT.md) for development setup and contribution guidelines.
 
-To add a new language ecosystem to DevRail, see the [Contributing a New Language Ecosystem](https://github.com/devrail-dev/devrail-standards/blob/main/standards/contributing-a-language.md) guide.
+To add a new language ecosystem to DevRail, see the [Contributing to DevRail](https://github.com/devrail-dev/devrail-standards/blob/main/standards/contributing.md) guide.
 
 ## License
 
