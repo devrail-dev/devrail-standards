@@ -41,8 +41,8 @@ HAS_ANSIBLE    := $(filter ansible,$(LANGUAGES))
 # ---------------------------------------------------------------------------
 # .PHONY declarations
 # ---------------------------------------------------------------------------
-.PHONY: help lint format test security scan docs check install-hooks
-.PHONY: _lint _format _test _security _scan _docs _check _check-config
+.PHONY: help lint format test security scan docs changelog check install-hooks init
+.PHONY: _lint _format _test _security _scan _docs _changelog _check _check-config _init
 
 # ===========================================================================
 # Public targets (run on host, delegate to Docker container)
@@ -53,6 +53,9 @@ help: ## Show this help
 	@echo ""
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | \
 		awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
+
+changelog: ## Generate CHANGELOG.md from conventional commits
+	$(DOCKER_RUN) make _changelog
 
 check: ## Run all checks (lint, format, test, security, scan, docs)
 	$(DOCKER_RUN) make _check
@@ -83,6 +86,9 @@ install-hooks: ## Install pre-commit hooks
 	@pre-commit install
 	@pre-commit install --hook-type commit-msg
 	@echo "Pre-commit hooks installed successfully. Hooks will run on every commit."
+
+init: ## Scaffold config files for declared languages
+	$(DOCKER_RUN) make _init
 
 lint: ## Run all linters
 	$(DOCKER_RUN) make _lint
@@ -488,6 +494,7 @@ _docs: _check-config
 		fi; \
 		_tv trivy "trivy --version"; \
 		_tv gitleaks "gitleaks version"; \
+		_tv git-cliff "git-cliff --version"; \
 		printf '}}\n'; \
 	} > .devrail-output/tool-versions.json; \
 	generators="$${generators}\"tool-versions\","; \
@@ -499,6 +506,199 @@ _docs: _check-config
 		echo "{\"target\":\"docs\",\"status\":\"fail\",\"duration_ms\":$$duration,\"generators\":[$${generators%,}],\"modules\":[$${modules%,}]}"; \
 	fi; \
 	exit $$overall_exit
+
+# --- _changelog: generate CHANGELOG.md from conventional commits ---
+_changelog: _check-config
+	@start_time=$$(date +%s%3N); \
+	config=""; \
+	if [ -f "cliff.toml" ]; then \
+		config="cliff.toml"; \
+	elif [ -f "/opt/devrail/config/cliff.toml" ]; then \
+		config="/opt/devrail/config/cliff.toml"; \
+	fi; \
+	if [ -z "$$config" ]; then \
+		echo '{"target":"changelog","status":"error","error":"no cliff.toml found","exit_code":2}'; \
+		exit 2; \
+	fi; \
+	if ! git rev-parse --git-dir >/dev/null 2>&1; then \
+		echo '{"target":"changelog","status":"error","error":"not a git repository","exit_code":2}'; \
+		exit 2; \
+	fi; \
+	git-cliff --config "$$config" --output CHANGELOG.md; \
+	cl_exit=$$?; \
+	end_time=$$(date +%s%3N); \
+	duration=$$((end_time - start_time)); \
+	if [ $$cl_exit -eq 0 ]; then \
+		echo "{\"target\":\"changelog\",\"status\":\"pass\",\"duration_ms\":$$duration,\"config\":\"$$config\",\"output\":\"CHANGELOG.md\"}"; \
+	else \
+		echo "{\"target\":\"changelog\",\"status\":\"fail\",\"duration_ms\":$$duration,\"config\":\"$$config\",\"exit_code\":$$cl_exit}"; \
+		exit $$cl_exit; \
+	fi
+
+# --- _init: scaffold config files for declared languages ---
+_init: _check-config
+	@created=""; \
+	skipped=""; \
+	scaffold() { \
+	  _f="$$1"; shift; \
+	  if [ ! -f "$$_f" ]; then \
+	    printf '%s\n' "$$@" > "$$_f"; \
+	    created="$${created}\"$$_f\","; \
+	  else \
+	    skipped="$${skipped}\"$$_f\","; \
+	  fi; \
+	}; \
+	scaffold .editorconfig \
+	  'root = true' \
+	  '' \
+	  '[*]' \
+	  'charset = utf-8' \
+	  'end_of_line = lf' \
+	  'insert_final_newline = true' \
+	  'trim_trailing_whitespace = true' \
+	  'indent_style = space' \
+	  'indent_size = 2' \
+	  '' \
+	  '[Makefile]' \
+	  'indent_style = tab' \
+	  '' \
+	  '[*.py]' \
+	  'indent_size = 4' \
+	  '' \
+	  '[*.sh]' \
+	  'indent_size = 2'; \
+	if [ -f "/opt/devrail/config/cliff.toml" ] && [ ! -f "cliff.toml" ]; then \
+	  cp /opt/devrail/config/cliff.toml cliff.toml; \
+	  created="$${created}\"cliff.toml\","; \
+	elif [ -f "cliff.toml" ]; then \
+	  skipped="$${skipped}\"cliff.toml\","; \
+	fi; \
+	if [ -n "$(HAS_PYTHON)" ]; then \
+	  scaffold ruff.toml \
+	    'line-length = 120' \
+	    'target-version = "py311"' \
+	    '' \
+	    '[lint]' \
+	    'select = ["E", "W", "F", "I", "UP", "B", "S", "C4", "SIM"]' \
+	    '' \
+	    '[format]' \
+	    'quote-style = "double"' \
+	    'indent-style = "space"'; \
+	fi; \
+	if [ -n "$(HAS_BASH)" ]; then \
+	  scaffold .shellcheckrc \
+	    'shell=bash' \
+	    'enable=all'; \
+	fi; \
+	if [ -n "$(HAS_TERRAFORM)" ]; then \
+	  scaffold .tflint.hcl \
+	    'config {' \
+	    '  call_module_type = "local"' \
+	    '}' \
+	    '' \
+	    'plugin "terraform" {' \
+	    '  enabled = true' \
+	    '  preset  = "recommended"' \
+	    '}'; \
+	fi; \
+	if [ -n "$(HAS_ANSIBLE)" ]; then \
+	  scaffold .ansible-lint \
+	    'profile: production' \
+	    '' \
+	    'exclude_paths:' \
+	    '  - .cache/' \
+	    '  - .github/' \
+	    '  - .gitlab/' \
+	    '' \
+	    'skip_list:' \
+	    '  - yaml[truthy]' \
+	    '' \
+	    'warn_list:' \
+	    '  - experimental'; \
+	fi; \
+	if [ -n "$(HAS_RUBY)" ]; then \
+	  scaffold .rubocop.yml \
+	    'AllCops:' \
+	    '  TargetRubyVersion: 3.1' \
+	    '  NewCops: enable' \
+	    '  Exclude:' \
+	    '    - "db/schema.rb"' \
+	    '    - "bin/**/*"' \
+	    '    - "vendor/**/*"' \
+	    '    - "node_modules/**/*"' \
+	    '' \
+	    'Style/Documentation:' \
+	    '  Enabled: false' \
+	    '' \
+	    'Metrics/BlockLength:' \
+	    '  Exclude:' \
+	    '    - "spec/**/*"' \
+	    '' \
+	    'Layout/LineLength:' \
+	    '  Max: 120'; \
+	  scaffold .reek.yml \
+	    'exclude_paths:' \
+	    '  - vendor' \
+	    '  - db/schema.rb' \
+	    '  - bin' \
+	    '' \
+	    'detectors:' \
+	    '  IrresponsibleModule:' \
+	    '    enabled: false'; \
+	  scaffold .rspec \
+	    '--require spec_helper' \
+	    '--format documentation' \
+	    '--color'; \
+	fi; \
+	if [ -n "$(HAS_GO)" ]; then \
+	  scaffold .golangci.yml \
+	    'version: "2"' \
+	    '' \
+	    'linters:' \
+	    '  enable:' \
+	    '    - errcheck' \
+	    '    - govet' \
+	    '    - staticcheck' \
+	    '    - gosec' \
+	    '    - ineffassign' \
+	    '    - unused' \
+	    '    - gocritic' \
+	    '    - gofumpt' \
+	    '    - misspell' \
+	    '    - revive' \
+	    '' \
+	    'issues:' \
+	    '  exclude-dirs:' \
+	    '    - vendor' \
+	    '    - node_modules'; \
+	fi; \
+	if [ -n "$(HAS_JAVASCRIPT)" ]; then \
+	  scaffold eslint.config.js \
+	    'import eslint from "@eslint/js";' \
+	    'import tseslint from "typescript-eslint";' \
+	    '' \
+	    'export default tseslint.config(' \
+	    '  eslint.configs.recommended,' \
+	    '  tseslint.configs.recommended,' \
+	    '  {' \
+	    '    ignores: ["node_modules/", "dist/", "build/", "coverage/"],' \
+	    '  }' \
+	    ');'; \
+	  scaffold .prettierrc \
+	    '{' \
+	    '  "semi": true,' \
+	    '  "singleQuote": false,' \
+	    '  "trailingComma": "es5",' \
+	    '  "printWidth": 80,' \
+	    '  "tabWidth": 2' \
+	    '}'; \
+	  scaffold .prettierignore \
+	    'node_modules/' \
+	    'dist/' \
+	    'build/' \
+	    'coverage/'; \
+	fi; \
+	echo "{\"target\":\"init\",\"created\":[$${created%,}],\"skipped\":[$${skipped%,}]}"
 
 # --- _check: orchestrate all targets (Story 3.5) ---
 _check: _check-config
