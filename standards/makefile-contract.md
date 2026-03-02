@@ -59,7 +59,7 @@ Runs universal scanners that apply to every project regardless of language. Dele
 
 #### `docs`
 
-Generates documentation. Delegates to the container where `_docs` executes documentation generators like `terraform-docs` for Terraform modules.
+Generates documentation. Delegates to the container where `_docs` executes documentation generators. Runs `terraform-docs` for Terraform modules and generates a tool version report (`.devrail-output/tool-versions.json`) listing the versions of all tools available for the declared languages.
 
 #### `check`
 
