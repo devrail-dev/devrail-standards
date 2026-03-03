@@ -101,6 +101,7 @@ type(scope): description
 **Scopes:** `python`, `bash`, `terraform`, `ansible`, `ruby`, `go`, `javascript`, `container`, `ci`, `makefile`, `standards`
 
 **Examples:**
+
 ```
 feat(ruby): add rubocop pre-commit hook
 fix(makefile): correct terraform lint directory detection

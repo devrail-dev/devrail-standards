@@ -1,0 +1,13 @@
+# Directories not owned by this repo
+_bmad/
+_bmad-output/
+validation/
+
+# Subtree copies of other repos (linted independently)
+dev-toolchain/
+github-repo-template/
+gitlab-repo-template/
+pre-commit-conventional-commits/
+
+# Generated / build artifacts
+.claude/

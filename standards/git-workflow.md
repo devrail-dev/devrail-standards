@@ -29,6 +29,7 @@ Use the same `type` prefixes as [Conventional Commits](../DEVELOPMENT.md#convent
 | `test` | `test/add-bats-coverage` |
 
 Rules:
+
 - Use lowercase with hyphens -- no underscores, no camelCase
 - Keep descriptions short (2-4 words)
 - Include issue number when applicable: `fix/123-login-error`

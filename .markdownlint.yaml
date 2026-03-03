@@ -1,0 +1,25 @@
+# .markdownlint.yaml — DevRail planning repo markdownlint configuration
+
+# MD010: Hard tabs — Makefile code blocks require tabs
+MD010: false
+
+# MD013: Line length — not enforced for documentation repos
+MD013: false
+
+# MD024: Duplicate headings — standards docs reuse heading names across sections
+MD024: false
+
+# MD033: Inline HTML — devrail markers use HTML comments
+MD033: false
+
+# MD034: Bare URLs — agent prompt examples contain copy-paste URLs
+MD034: false
+
+# MD040: Fenced code language — many code blocks show generic output
+MD040: false
+
+# MD041: First line heading — some files have YAML frontmatter
+MD041: false
+
+# MD060: Table column style — our tables use compact pipe style (|---|---|)
+MD060: false

@@ -58,12 +58,14 @@ If you do not want to commit DevRail files yet, you can paste instructions direc
 > You are working on a project that follows DevRail development standards (https://devrail.dev).
 >
 > **Key rules:**
+>
 > 1. Run `make check` before completing any task. This runs all linters, formatters, security scanners, and tests inside a Docker container.
 > 2. Use conventional commits: `type(scope): description`.
 > 3. Never install tools on the host. All tools run inside the `ghcr.io/devrail-dev/dev-toolchain:v1` container via `make` targets.
 > 4. Respect `.editorconfig` formatting rules.
 >
 > **Available `make` targets:**
+>
 > - `make lint` -- run linters
 > - `make format` -- check formatting
 > - `make test` -- run tests

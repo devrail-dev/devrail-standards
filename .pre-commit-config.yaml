@@ -25,14 +25,11 @@ repos:
       - id: check-added-large-files
 
   # --- Markdown linting ---
+  # Config: .markdownlint.yaml  Ignore: .markdownlintignore
   - repo: https://github.com/igorshubovych/markdownlint-cli
     rev: v0.43.0
     hooks:
       - id: markdownlint
-        args: ["--disable", "MD013", "MD033", "MD041", "--"]
-        # MD013: Line length (disabled -- not enforced for documentation repos)
-        # MD033: Inline HTML (disabled -- devrail markers use HTML comments)
-        # MD041: First line heading (disabled -- some files have frontmatter)
 
   # --- Pre-Push: Full Check Gate ---
   # Runs make check before every push. Skip with: git push --no-verify
