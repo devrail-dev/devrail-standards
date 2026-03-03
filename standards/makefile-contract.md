@@ -4,7 +4,7 @@ This document is the authoritative reference for the DevRail Makefile contract. 
 
 ## Public Targets
 
-Every DevRail-managed repo exposes exactly these nine public targets:
+Every DevRail-managed repo exposes exactly these ten public targets:
 
 | Target | Purpose | Behavior |
 |---|---|---|
@@ -15,6 +15,7 @@ Every DevRail-managed repo exposes exactly these nine public targets:
 | `security` | Run language-specific security scanners | Delegates to Docker container; runs `_security` inside |
 | `scan` | Run universal scanning (trivy, gitleaks) | Delegates to Docker container; runs `_scan` inside |
 | `docs` | Generate documentation | Delegates to Docker container; runs `_docs` inside |
+| `changelog` | Generate changelog from conventional commits | Delegates to Docker container; runs `_changelog` inside |
 | `check` | Run ALL above targets; report composite summary | Orchestrates all targets in sequence, reports pass/fail summary |
 | `install-hooks` | Install pre-commit hooks | Runs locally on the host (not inside container) |
 
@@ -26,6 +27,7 @@ The default target. When a developer runs `make` with no arguments, `help` is in
 
 ```
 $ make help
+changelog            Generate changelog from conventional commits
 check                Run all checks (lint, format, test, security, docs)
 docs                 Generate documentation
 format               Run all formatters
@@ -56,6 +58,10 @@ Runs language-specific security scanners. Delegates to the container where `_sec
 #### `scan`
 
 Runs universal scanners that apply to every project regardless of language. Delegates to the container where `_scan` executes `trivy` (vulnerability scanning) and `gitleaks` (secret detection).
+
+#### `changelog`
+
+Generates a changelog from conventional commit history. Delegates to the container where `_changelog` executes `git-cliff` to parse commits and produce a structured changelog. git-cliff reads the repository's commit history, groups entries by type (features, fixes, etc.), and outputs a `CHANGELOG.md` file. This target runs independently of `make check` and is invoked on-demand rather than as part of the standard check sequence.
 
 #### `docs`
 
@@ -151,7 +157,7 @@ install-hooks: ## Install pre-commit hooks
 
 - **Prefix:** `_` (underscore)
 - **Case:** `_lower-kebab-case`
-- **Examples:** `_lint`, `_format`, `_test`, `_security`, `_scan`, `_docs`, `_check`
+- **Examples:** `_lint`, `_format`, `_test`, `_security`, `_scan`, `_docs`, `_changelog`, `_check`
 - Internal targets do NOT have `## description` comments and do NOT appear in `make help` output.
 
 ### Variables
@@ -172,8 +178,8 @@ DOCKER_RUN    ?= docker run --rm -v "$$(pwd):/workspace" -w /workspace $(DEVRAIL
 .DEFAULT_GOAL := help
 
 # 2. .PHONY declarations
-.PHONY: help lint format test security scan docs check install-hooks
-.PHONY: _lint _format _test _security _scan _docs _check
+.PHONY: help lint format test security scan docs changelog check install-hooks
+.PHONY: _lint _format _test _security _scan _docs _changelog _check
 
 # 3. Public targets (with ## description comments)
 help: ## Show this help
@@ -349,8 +355,8 @@ DOCKER_RUN    ?= docker run --rm -v "$$(pwd):/workspace" -w /workspace $(DEVRAIL
 .DEFAULT_GOAL := help
 
 # .PHONY declarations
-.PHONY: help lint format test security scan docs check install-hooks
-.PHONY: _lint _format _test _security _scan _docs _check
+.PHONY: help lint format test security scan docs changelog check install-hooks
+.PHONY: _lint _format _test _security _scan _docs _changelog _check
 
 # Public targets
 help: ## Show this help
@@ -374,6 +380,9 @@ scan: ## Run full scan (lint + security)
 
 docs: ## Generate documentation
 	$(DOCKER_RUN) make _docs
+
+changelog: ## Generate changelog from conventional commits
+	$(DOCKER_RUN) make _changelog
 
 check: ## Run all checks (lint, format, test, security, docs)
 	$(DOCKER_RUN) make _check
@@ -415,6 +424,10 @@ _scan:
 _docs:
 	# Documentation generation (driven by .devrail.yml languages list)
 	# Terraform: terraform-docs markdown table . > README.md
+
+_changelog:
+	# Changelog generation from conventional commits
+	# git-cliff --output CHANGELOG.md
 
 _check: _lint _format _test _security _scan _docs
 	# Orchestrates all checks; reports composite summary

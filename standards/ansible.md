@@ -92,3 +92,4 @@ These run via `make test` in CI pipelines. They are **not** configured as pre-co
 - `molecule` scenarios should test at minimum: converge (apply), idempotence (re-apply with zero changes), and verify (assertions).
 - Role directory structure follows Ansible Galaxy conventions: `tasks/`, `handlers/`, `defaults/`, `vars/`, `templates/`, `files/`, `meta/`.
 - All tools are pre-installed in the dev-toolchain container. Do not install them on the host.
+- For cross-cutting practices (DRY, idempotency, error handling, testing, naming) and git workflow (branching, code review, conventional commits), see [Coding Practices](coding-practices.md) and [Git Workflow](git-workflow.md).
