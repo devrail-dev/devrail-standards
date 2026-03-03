@@ -1,0 +1,17 @@
+# .gitleaksignore — Gitleaks false positive allowlist
+#
+# Add fingerprints of allowed findings to suppress false positives.
+# Each line is a finding fingerprint from `gitleaks detect -v` output.
+#
+# See: https://github.com/gitleaks/gitleaks#configuration
+
+# _bmad/tea/testarch/knowledge/api-testing-patterns.md — example JWT in docs
+_bmad/tea/testarch/knowledge/api-testing-patterns.md:generic-api-key:680
+
+# _bmad/_config/files-manifest.csv — SHA-256 content hashes, not secrets
+_bmad/_config/files-manifest.csv:generic-api-key:241
+_bmad/_config/files-manifest.csv:generic-api-key:242
+_bmad/_config/files-manifest.csv:generic-api-key:244
+_bmad/_config/files-manifest.csv:generic-api-key:260
+_bmad/_config/files-manifest.csv:generic-api-key:352
+_bmad/_config/files-manifest.csv:generic-api-key:376
