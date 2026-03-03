@@ -134,7 +134,7 @@ git commit -m "chore: add DevRail development standards"
 
 If your project already has a Makefile, you have two options:
 
-1. **Merge targets.** Add DevRail's public targets (`lint`, `format`, `test`, `security`, `scan`, `docs`, `check`, `install-hooks`) to your existing Makefile. Keep your existing targets alongside them.
+1. **Merge targets.** Add DevRail's public targets (`lint`, `format`, `test`, `security`, `scan`, `docs`, `changelog`, `check`, `install-hooks`) to your existing Makefile. Keep your existing targets alongside them.
 
 2. **Replace.** If your existing Makefile only has basic targets, replace it entirely with the DevRail Makefile.
 

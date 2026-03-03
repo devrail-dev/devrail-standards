@@ -1,5 +1,7 @@
 # pre-commit-conventional-commits
 
+> DevRail `v1` is stable. See [STABILITY.md](STABILITY.md) for component status.
+
 A [pre-commit](https://pre-commit.com/) hook that enforces [Conventional Commits](https://www.conventionalcommits.org/) with DevRail-specific types and scopes.
 
 [![pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit)](https://github.com/pre-commit/pre-commit)

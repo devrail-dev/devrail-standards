@@ -6,6 +6,9 @@ languages:
   # - bash
   # - terraform
   # - ansible
+  # - ruby
+  # - go
+  # - javascript
 
 # fail_fast: false          # default: false (run-all-report-all)
 # log_format: json          # default: json | options: json, human

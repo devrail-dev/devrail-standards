@@ -2,10 +2,10 @@
 title: "Universal Security"
 linkTitle: "Universal Security"
 weight: 50
-description: "Universal security tools that run for every project: trivy and gitleaks."
+description: "Universal tools that run for every project: trivy, gitleaks, and git-cliff."
 ---
 
-These tools run for every DevRail-managed project regardless of declared languages. They provide baseline vulnerability scanning and secret detection.
+These tools run for every DevRail-managed project regardless of declared languages. They provide baseline vulnerability scanning, secret detection, and changelog generation.
 
 ## Tools
 
@@ -13,6 +13,7 @@ These tools run for every DevRail-managed project regardless of declared languag
 |---|---|---|
 | Vulnerability Scanning | trivy | Container image and filesystem vulnerability scanning |
 | Secret Detection | gitleaks | Detect secrets in git history and staged changes |
+| Changelog | git-cliff | Generate CHANGELOG.md from conventional commits |
 
 All tools are pre-installed in the dev-toolchain container. Do not install them on the host.
 
@@ -55,6 +56,14 @@ Recommended `.gitleaks.toml`:
 
 gitleaks detects secrets (API keys, tokens, passwords) in git history and staged changes. Use the allowlist only for verified false positives.
 
+### git-cliff
+
+Config file: `cliff.toml` at repository root. The DevRail templates include a default configuration that groups commits by conventional commit type.
+
+git-cliff reads your git log and generates a `CHANGELOG.md` following the [Keep a Changelog](https://keepachangelog.com/) format. It requires conventional commit messages to produce meaningful output.
+
+Run `make changelog` to regenerate the changelog from the full commit history.
+
 ## Makefile Targets
 
 | Target | Command | Description |
@@ -62,6 +71,7 @@ gitleaks detects secrets (API keys, tokens, passwords) in git history and staged
 | `make scan` | `trivy fs .` | Filesystem vulnerability scan |
 | `make scan` | `trivy image <image>` | Container image vulnerability scan |
 | `make scan` | `gitleaks detect --source .` | Secret detection in repository |
+| `make changelog` | `git-cliff -o CHANGELOG.md` | Generate changelog from conventional commits |
 
 The `make scan` target is separate from `make security`. The `security` target runs language-specific scanners (bandit, tfsec, etc.), while `scan` runs universal scanners that apply to all projects.
 
@@ -91,4 +101,5 @@ repos:
 - **gitleaks runs both locally and in CI.** The local pre-commit hook catches secrets immediately; CI provides a final safety net.
 - **Findings at any severity level cause a non-zero exit code.** Do not suppress findings without explicit justification in `.trivyignore` or `.gitleaks.toml` allowlist.
 - **Both tools produce JSON output in CI** for artifact collection and reporting.
+- **`git-cliff` runs as part of `make changelog`**, which is separate from both `make scan` and `make check`. It generates a `CHANGELOG.md` from conventional commits and requires a `cliff.toml` configuration file.
 - **All tools are pre-installed in the dev-toolchain container.** Do not install them on the host.

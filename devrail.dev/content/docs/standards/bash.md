@@ -170,3 +170,4 @@ echo "Starting installation"  # Do not do this
 - **Use shared logging functions** from `lib/log.sh`. No raw `echo` for status messages.
 - **Every script supports `--help`** and uses `getopts` for argument parsing.
 - **All tools are pre-installed in the dev-toolchain container.** Do not install them on the host.
+- For cross-cutting coding practices and git workflow standards that apply to all languages, see [Coding Practices](/docs/standards/practices/).

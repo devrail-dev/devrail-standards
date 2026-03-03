@@ -128,7 +128,7 @@ To pin a specific container version:
 
 ```makefile
 # In your Makefile, override the default image
-DEVRAIL_IMAGE ?= ghcr.io/devrail-dev/dev-toolchain:v1.3.2
+DEVRAIL_IMAGE ?= ghcr.io/devrail-dev/dev-toolchain:v1.5.0
 ```
 
 ### Adjusting CI Triggers

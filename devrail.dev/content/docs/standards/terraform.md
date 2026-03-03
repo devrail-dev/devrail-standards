@@ -169,3 +169,4 @@ repos:
 - **`terraform-docs` runs as part of `make docs`.** Place `<!-- BEGIN_TF_DOCS -->` / `<!-- END_TF_DOCS -->` markers in your `README.md`.
 - **`terratest` tests are written in Go.** The `tests/` directory must contain a `go.mod` file.
 - **All tools are pre-installed in the dev-toolchain container.** Do not install them on the host.
+- For cross-cutting coding practices and git workflow standards that apply to all languages, see [Coding Practices](/docs/standards/practices/).

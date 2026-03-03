@@ -164,7 +164,7 @@ Override the container image in `.gitlab-ci.yml`:
 
 ```yaml
 # Pin to a specific version
-image: ghcr.io/devrail-dev/dev-toolchain:v1.3.2
+image: ghcr.io/devrail-dev/dev-toolchain:v1.5.0
 ```
 
 Also update the `DEVRAIL_IMAGE` variable in your `Makefile` for local development consistency.

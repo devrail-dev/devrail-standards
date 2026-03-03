@@ -1,5 +1,7 @@
 # Project Name
 
+> Built with [DevRail](https://devrail.dev) `v1` standards. See [STABILITY.md](STABILITY.md) for component status.
+
 > One-line project description.
 
 <!-- TODO: Replace badge URLs with actual project paths -->

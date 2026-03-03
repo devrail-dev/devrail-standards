@@ -47,7 +47,7 @@ Repos never import code from each other. Integration happens through three mecha
 | Interface | Producer | Consumer | Contract |
 |---|---|---|---|
 | Container image | dev-toolchain | Templates (via Makefile) | `ghcr.io/devrail-dev/dev-toolchain:v1` with all tools installed |
-| Makefile targets | Templates | CI pipelines, agents, developers | `make lint/format/test/security/docs/check` |
+| Makefile targets | Templates | CI pipelines, agents, developers | `make lint/format/test/security/docs/changelog/check` |
 | `.devrail.yml` | Developer/agent | Makefile, CI | Language declarations, project settings |
 | Pre-commit hook | pre-commit-conventional-commits | Templates (via `.pre-commit-config.yaml`) | Conventional commit validation |
 | Agent instructions | DEVELOPMENT.md + shims | AI agents | Critical rules + pointer to full standards |
