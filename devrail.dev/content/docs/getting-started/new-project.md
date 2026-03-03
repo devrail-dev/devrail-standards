@@ -44,7 +44,7 @@ Supported languages: `python`, `bash`, `terraform`, `ansible`, `ruby`, `go`, `ja
 make install-hooks
 ```
 
-This sets up pre-commit hooks that run formatting checks and secret detection on every commit.
+This sets up pre-commit hooks that run formatting checks and secret detection on every commit, plus a pre-push hook that runs `make check` before every push.
 
 ### Step 4: Run Your First Check
 

@@ -185,4 +185,5 @@ Signed commits (GPG or SSH) are recommended but not required. If your organizati
 
 - Branch protection settings should be configured as part of repository setup, using the DevRail template repos as a baseline.
 - The `gitleaks` pre-commit hook catches most secret leaks before they reach the remote. See [Universal Security Tools](universal.md) for configuration.
+- The `make check` pre-push hook runs the full DevRail check suite before every `git push`, providing a local safety net in addition to CI. Skip with `git push --no-verify` when necessary.
 - For commit message format details, see [Conventional Commits](../DEVELOPMENT.md#conventional-commits) in DEVELOPMENT.md. This document intentionally does not duplicate those rules.
