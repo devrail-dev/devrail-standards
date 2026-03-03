@@ -59,6 +59,9 @@ Follow the dominant convention for each language:
 | Bash | `lower_snake_case` | `UPPER_SNAKE_CASE` with `readonly` | N/A |
 | Terraform | `snake_case` | N/A | `PascalCase` (module names) |
 | Ansible | `snake_case` | `UPPER_SNAKE_CASE` | N/A |
+| Ruby | `snake_case` | `UPPER_SNAKE_CASE` | `PascalCase` |
+| Go | `camelCase` / `PascalCase` (exported) | `PascalCase` | `PascalCase` |
+| JavaScript | `camelCase` | `UPPER_SNAKE_CASE` | `PascalCase` |
 
 ### General Naming Rules
 

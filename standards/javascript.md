@@ -175,3 +175,4 @@ These run via `make security` and `make test` in CI pipelines. They are **not** 
 - **npm audit gates on `package-lock.json`.** If no `package-lock.json` exists, npm audit is skipped because there are no locked dependencies to scan.
 - **Vitest gates on test file presence.** If no `*.test.*` or `*.spec.*` files exist, vitest is skipped.
 - **All tools are pre-installed in the dev-toolchain container.** Do not install them on the host.
+- For cross-cutting practices (DRY, idempotency, error handling, testing, naming) and git workflow (branching, code review, conventional commits), see [Coding Practices](coding-practices.md) and [Git Workflow](git-workflow.md).

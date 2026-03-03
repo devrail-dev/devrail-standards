@@ -93,3 +93,4 @@ These run via `make security` and `make test` in CI pipelines. They are **not** 
 - **Go tools use `./...` patterns.** The `./...` pattern matches all packages in the module. This is the standard Go convention for recursive operations.
 - **`go.sum` presence gates security scanning.** If no `go.sum` file exists, govulncheck is skipped because there are no module dependencies to scan.
 - **All tools are pre-installed in the dev-toolchain container.** Do not install them on the host.
+- For cross-cutting practices (DRY, idempotency, error handling, testing, naming) and git workflow (branching, code review, conventional commits), see [Coding Practices](coding-practices.md) and [Git Workflow](git-workflow.md).

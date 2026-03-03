@@ -137,3 +137,4 @@ These run via `make security`, `make test`, and `make docs` in CI pipelines. The
 - `terraform-docs` runs as part of `make docs`. It auto-generates module documentation from variable and output blocks. Place `<!-- BEGIN_TF_DOCS -->` / `<!-- END_TF_DOCS -->` markers in your `README.md`.
 - `terratest` tests are written in Go. The `tests/` directory must contain a `go.mod` file.
 - All tools are pre-installed in the dev-toolchain container. Do not install them on the host.
+- For cross-cutting practices (DRY, idempotency, error handling, testing, naming) and git workflow (branching, code review, conventional commits), see [Coding Practices](coding-practices.md) and [Git Workflow](git-workflow.md).
