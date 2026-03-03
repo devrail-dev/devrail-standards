@@ -85,11 +85,11 @@ Follow the dominant convention for each language:
 | Language | Pattern |
 |---|---|
 | Python | Raise specific exceptions (`ValueError`, `FileNotFoundError`). Use `try/except` with explicit exception types. |
-| Bash | `set -euo pipefail` + `die "message"` from `lib/log.sh`. Guard commands with `||`. |
+| Bash | `set -euo pipefail` + `die "message"` from `lib/log.sh`. Guard commands with `\|\|`. |
 | Terraform | Use `validation` blocks in variables. Use `precondition`/`postcondition` in lifecycle blocks. |
 | Ansible | Use `failed_when` and `changed_when`. Validate with `assert` tasks. |
 
-5. **Log errors before propagating.** Use the appropriate logging mechanism (`log_error`, Python `logging`, etc.) so errors are visible in structured output even if the caller catches and handles them.
+1. **Log errors before propagating.** Use the appropriate logging mechanism (`log_error`, Python `logging`, etc.) so errors are visible in structured output even if the caller catches and handles them.
 
 ## Testing Standards
 
@@ -110,6 +110,7 @@ test_<what>_<condition>_<expected>
 ```
 
 Examples:
+
 - `test_validate_commit_with_missing_type_returns_error`
 - `test_install_script_when_tool_exists_skips_install`
 - `test_lint_target_with_no_files_exits_zero`

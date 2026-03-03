@@ -23,6 +23,7 @@ This document defines the complete schema for `.devrail.yml`, the project config
 **Allowed values:** `python`, `bash`, `terraform`, `ansible`, `ruby`, `go`, `javascript`
 
 **Validation rules:**
+
 - Must be a non-empty list
 - Each entry must be one of the supported language identifiers
 - Duplicate entries are ignored
@@ -47,6 +48,7 @@ languages:
 Can also be overridden at runtime via the `DEVRAIL_FAIL_FAST=1` environment variable.
 
 **Validation rules:**
+
 - Must be a boolean (`true` or `false`)
 - If omitted, defaults to `false`
 
@@ -65,12 +67,14 @@ fail_fast: false
 **Description:** Controls the output format for Makefile targets and scripts.
 
 **Allowed values:**
+
 - `json` -- structured JSON output (default, preferred for CI and agents)
 - `human` -- human-readable table format
 
 Can also be overridden at runtime via the `DEVRAIL_LOG_FORMAT=human` environment variable.
 
 **Validation rules:**
+
 - Must be one of: `json`, `human`
 - If omitted, defaults to `json`
 
@@ -87,6 +91,7 @@ Per-language overrides are optional top-level keys matching the language name. T
 **Structure:** Each override key matches a language listed in `languages`. The value is a mapping of concern names to tool names (string) or tool lists (list of strings).
 
 **Override keys:**
+
 - `linter` -- linting tool
 - `formatter` -- formatting tool
 - `security` -- security scanning tools
@@ -95,6 +100,7 @@ Per-language overrides are optional top-level keys matching the language name. T
 - `docs` -- documentation generation tool
 
 **Validation rules:**
+
 - Override keys must match an entry in the `languages` list
 - Override keys for unlisted languages are ignored
 - Individual tool overrides are optional; omitted keys use defaults
@@ -324,6 +330,7 @@ The following table shows the default tool for each concern per language. These 
 | Universal | trivy, gitleaks | trivy, gitleaks | trivy, gitleaks | trivy, gitleaks | trivy, gitleaks | trivy, gitleaks | trivy, gitleaks |
 
 **Notes:**
+
 - "Universal" tools run for all languages and are not language-specific overrides
 - A `--` entry means the concern does not apply to that language
 - Default tools are used when no per-language override is specified
