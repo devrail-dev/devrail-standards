@@ -6,8 +6,8 @@ HUGO_VERSION  ?= latest
 .DEFAULT_GOAL := help
 
 # .PHONY declarations
-.PHONY: help build serve lint format test security scan docs check install-hooks
-.PHONY: _lint _format _test _security _scan _docs _check
+.PHONY: help build serve lint format fix test security scan docs check install-hooks
+.PHONY: _lint _format _fix _test _security _scan _docs _check
 
 # Public targets
 help: ## Show this help
@@ -22,6 +22,9 @@ serve: ## Start local Hugo development server
 
 lint: ## Run all linters
 	$(DOCKER_RUN) make _lint
+
+fix: ## Auto-fix formatting issues in-place
+	$(DOCKER_RUN) make _fix
 
 format: ## Run all formatters
 	$(DOCKER_RUN) make _format
@@ -51,6 +54,9 @@ _lint:
 
 _format:
 	@echo "format: no language-specific formatters for documentation site"
+
+_fix:
+	@echo "fix: no language-specific formatters for documentation site"
 
 _test:
 	@echo "test: no language-specific tests for documentation site"
