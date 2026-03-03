@@ -104,13 +104,11 @@ Expect some findings on the first run -- your existing code may not match DevRai
 
 ### Fixing Findings
 
-Use `make` targets to auto-fix what can be auto-fixed:
+Use `make fix` to auto-fix formatting issues in-place:
 
 ```bash
-# Auto-format code (inside the container)
-# Note: formatting targets apply fixes directly
-docker run --rm -v "$(pwd):/workspace" -w /workspace \
-  ghcr.io/devrail-dev/dev-toolchain:v1 make _format
+# Auto-fix formatting (runs inside the container)
+make fix
 ```
 
 For linting issues that cannot be auto-fixed, address them manually following the guidance in the [Standards Reference](/docs/standards/).

@@ -27,6 +27,7 @@ The Makefile is the universal execution interface. Every target produces consist
 | `make help` | Show available targets (default) |
 | `make lint` | Run all linters for declared languages |
 | `make format` | Run all formatters for declared languages |
+| `make fix` | Auto-fix formatting issues in-place |
 | `make test` | Run project test suite |
 | `make security` | Run language-specific security scanners |
 | `make scan` | Run universal scanning (trivy, gitleaks) |

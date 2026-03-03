@@ -30,7 +30,8 @@ Each Makefile target runs the relevant tools for all languages declared in `.dev
 | Target | What It Runs |
 |---|---|
 | `make lint` | ruff check, shellcheck, tflint, ansible-lint, mypy, rubocop, reek, golangci-lint, eslint, tsc |
-| `make format` | ruff format, shfmt, terraform fmt, rubocop, gofumpt, prettier |
+| `make format` | ruff format --check, shfmt -d, terraform fmt -check, rubocop --check, gofumpt -d, prettier --check |
+| `make fix` | ruff format, shfmt -w, terraform fmt, rubocop -a, gofumpt -w, prettier --write |
 | `make test` | pytest, bats, terratest, molecule, rspec, go test, vitest |
 | `make security` | bandit, semgrep, tfsec, checkov, brakeman, bundler-audit, govulncheck, npm audit |
 | `make scan` | trivy, gitleaks (universal -- all projects) |

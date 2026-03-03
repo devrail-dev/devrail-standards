@@ -3,8 +3,8 @@ DOCKER_RUN    ?= docker run --rm -v "$$(pwd):/workspace" -w /workspace $(DEVRAIL
 
 .DEFAULT_GOAL := help
 
-.PHONY: help lint format test security scan docs check install-hooks
-.PHONY: _lint _format _test _security _scan _docs _check
+.PHONY: help lint format fix test security scan docs check install-hooks
+.PHONY: _lint _format _fix _test _security _scan _docs _check
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | \
@@ -12,6 +12,9 @@ help: ## Show this help
 
 lint: ## Run all linters
 	$(DOCKER_RUN) make _lint
+
+fix: ## Auto-fix formatting issues in-place
+	$(DOCKER_RUN) make _fix
 
 format: ## Run all formatters
 	$(DOCKER_RUN) make _format
@@ -42,8 +45,11 @@ _lint:
 
 _format:
 	# Internal target — runs inside container
-	# Requires dev-toolchain container (Epic 2)
 	@echo "format: not yet implemented — requires dev-toolchain container"
+
+_fix:
+	# Internal target — runs inside container
+	@echo "fix: not yet implemented — requires dev-toolchain container"
 
 _test:
 	# Internal target — runs inside container

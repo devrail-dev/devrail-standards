@@ -4,13 +4,14 @@ This document is the authoritative reference for the DevRail Makefile contract. 
 
 ## Public Targets
 
-Every DevRail-managed repo exposes exactly these ten public targets:
+Every DevRail-managed repo exposes exactly these public targets:
 
 | Target | Purpose | Behavior |
 |---|---|---|
 | `help` | Default target; shows available targets | Auto-generated from `## description` comments in the Makefile |
 | `lint` | Run all language-appropriate linters | Delegates to Docker container; runs `_lint` inside |
 | `format` | Run all language-appropriate formatters | Delegates to Docker container; runs `_format` inside |
+| `fix` | Auto-fix formatting issues in-place | Delegates to Docker container; runs `_fix` inside |
 | `test` | Run project test suite | Delegates to Docker container; runs `_test` inside |
 | `security` | Run language-specific security scanners | Delegates to Docker container; runs `_security` inside |
 | `scan` | Run universal scanning (trivy, gitleaks) | Delegates to Docker container; runs `_scan` inside |
@@ -30,6 +31,7 @@ $ make help
 changelog            Generate changelog from conventional commits
 check                Run all checks (lint, format, test, security, docs)
 docs                 Generate documentation
+fix                  Auto-fix formatting issues in-place
 format               Run all formatters
 help                 Show this help
 install-hooks        Install pre-commit hooks
@@ -46,6 +48,12 @@ Runs all linters for the languages declared in `.devrail.yml`. Delegates to the 
 #### `format`
 
 Runs all formatters for the declared languages. Delegates to the container where `_format` executes tools like `ruff format` for Python, `shfmt` for Bash, and `terraform fmt` for Terraform.
+
+#### `fix`
+
+Applies all formatters in write mode for the languages declared in `.devrail.yml`. Unlike `format` (which only checks), `fix` modifies files in-place. Delegates to the container where `_fix` executes tools like `ruff format` for Python, `shfmt -w` for Bash, `terraform fmt` for Terraform, `rubocop -a` for Ruby, `gofumpt -w` for Go, and `prettier --write` for JavaScript.
+
+This target is intentionally excluded from `make check` because `check` must be a read-only operation. Run `make fix` manually when you want to auto-remediate formatting issues reported by `make format`.
 
 #### `test`
 
@@ -157,7 +165,7 @@ install-hooks: ## Install pre-commit hooks
 
 - **Prefix:** `_` (underscore)
 - **Case:** `_lower-kebab-case`
-- **Examples:** `_lint`, `_format`, `_test`, `_security`, `_scan`, `_docs`, `_changelog`, `_check`
+- **Examples:** `_lint`, `_format`, `_fix`, `_test`, `_security`, `_scan`, `_docs`, `_changelog`, `_check`
 - Internal targets do NOT have `## description` comments and do NOT appear in `make help` output.
 
 ### Variables
@@ -178,8 +186,8 @@ DOCKER_RUN    ?= docker run --rm -v "$$(pwd):/workspace" -w /workspace $(DEVRAIL
 .DEFAULT_GOAL := help
 
 # 2. .PHONY declarations
-.PHONY: help lint format test security scan docs changelog check install-hooks
-.PHONY: _lint _format _test _security _scan _docs _changelog _check
+.PHONY: help lint format fix test security scan docs changelog check install-hooks
+.PHONY: _lint _format _fix _test _security _scan _docs _changelog _check
 
 # 3. Public targets (with ## description comments)
 help: ## Show this help
@@ -336,7 +344,7 @@ _check-config:
 
 | `.devrail.yml` Key | Makefile Effect |
 |---|---|
-| `languages` | Selects which tools run in `_lint`, `_format`, `_test`, `_security`, `_docs` |
+| `languages` | Selects which tools run in `_lint`, `_format`, `_fix`, `_test`, `_security`, `_docs` |
 | `fail_fast` | Enables fail-fast error handling (overridden by `DEVRAIL_FAIL_FAST` env var) |
 | `log_format` | Switches output between JSON and human-readable (overridden by `DEVRAIL_LOG_FORMAT` env var) |
 | `<language>` overrides | Customizes tool selection for a specific language |
@@ -355,8 +363,8 @@ DOCKER_RUN    ?= docker run --rm -v "$$(pwd):/workspace" -w /workspace $(DEVRAIL
 .DEFAULT_GOAL := help
 
 # .PHONY declarations
-.PHONY: help lint format test security scan docs changelog check install-hooks
-.PHONY: _lint _format _test _security _scan _docs _changelog _check
+.PHONY: help lint format fix test security scan docs changelog check install-hooks
+.PHONY: _lint _format _fix _test _security _scan _docs _changelog _check
 
 # Public targets
 help: ## Show this help
@@ -365,6 +373,9 @@ help: ## Show this help
 
 lint: ## Run all linters
 	$(DOCKER_RUN) make _lint
+
+fix: ## Auto-fix formatting issues in-place
+	$(DOCKER_RUN) make _fix
 
 format: ## Run all formatters
 	$(DOCKER_RUN) make _format
@@ -400,7 +411,13 @@ _lint:
 	# Ansible:   ansible-lint
 
 _format:
-	# Language-specific formatting (driven by .devrail.yml languages list)
+	# Language-specific format checking (driven by .devrail.yml languages list)
+	# Python:    ruff format --check .
+	# Bash:      shfmt -d scripts/*.sh
+	# Terraform: terraform fmt -check -recursive
+
+_fix:
+	# Language-specific format fixing (driven by .devrail.yml languages list)
 	# Python:    ruff format .
 	# Bash:      shfmt -w scripts/*.sh
 	# Terraform: terraform fmt -recursive
