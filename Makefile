@@ -33,6 +33,7 @@ check: ## Run all checks (lint, format, test, security, docs)
 
 install-hooks: ## Install pre-commit hooks
 	pre-commit install
+	pre-commit install --hook-type pre-push
 
 _lint:
 	# Internal target — runs inside container

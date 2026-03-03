@@ -91,7 +91,7 @@ Thumbs.db
 make install-hooks
 ```
 
-This command runs `pre-commit install` to set up hooks that check formatting, linting, and secret detection on every commit.
+This command sets up pre-commit hooks for formatting, linting, and secret detection on every commit, plus a pre-push hook that runs `make check` before every push.
 
 ## Step 5: Run Your First Check
 

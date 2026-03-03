@@ -17,7 +17,7 @@ Every DevRail-managed repo exposes exactly these ten public targets:
 | `docs` | Generate documentation | Delegates to Docker container; runs `_docs` inside |
 | `changelog` | Generate changelog from conventional commits | Delegates to Docker container; runs `_changelog` inside |
 | `check` | Run ALL above targets; report composite summary | Orchestrates all targets in sequence, reports pass/fail summary |
-| `install-hooks` | Install pre-commit hooks | Runs locally on the host (not inside container) |
+| `install-hooks` | Install pre-commit and pre-push hooks | Runs locally on the host (not inside container) |
 
 ### Target Descriptions
 
@@ -73,7 +73,7 @@ The composite target. Runs all of the above targets (`lint`, `format`, `test`, `
 
 #### `install-hooks`
 
-Installs pre-commit hooks into the local repository. This is the only public target that runs directly on the host instead of delegating to Docker. It executes `pre-commit install` to set up the git hooks.
+Installs pre-commit and pre-push hooks into the local repository. This is the only public target that runs directly on the host instead of delegating to Docker. It executes `pre-commit install` to set up commit-time hooks (formatting, secret detection) and `pre-commit install --hook-type pre-push` to set up a pre-push hook that runs `make check` before every push.
 
 ## Two-Layer Delegation Pattern
 
@@ -389,6 +389,7 @@ check: ## Run all checks (lint, format, test, security, docs)
 
 install-hooks: ## Install pre-commit hooks
 	pre-commit install
+	pre-commit install --hook-type pre-push
 
 # Internal targets
 _lint:
