@@ -1,5 +1,7 @@
 # devrail.dev
 
+> DevRail `v1` is stable. See [STABILITY.md](STABILITY.md) for component status.
+
 The documentation site for [DevRail](https://devrail.dev) -- opinionated development standards for teams that ship with AI agents.
 
 ## Quick Start

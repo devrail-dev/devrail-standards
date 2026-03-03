@@ -40,6 +40,37 @@ repos:
   #     - id: terraform_fmt
   #     - id: terraform_tflint
 
+  # --- Ruby (uncomment if languages includes ruby) ---
+  # Linting and formatting with rubocop
+  # - repo: https://github.com/rubocop/rubocop
+  #   rev: v1.73.2
+  #   hooks:
+  #     - id: rubocop
+
+  # --- Go (uncomment if languages includes go) ---
+  # Linting with golangci-lint v2
+  # - repo: https://github.com/golangci/golangci-lint
+  #   rev: v2.1.6
+  #   hooks:
+  #     - id: golangci-lint-full
+
+  # --- JavaScript/TypeScript (uncomment if languages includes javascript) ---
+  # Linting with ESLint v9 (flat config)
+  # - repo: https://github.com/pre-commit/mirrors-eslint
+  #   rev: v9.27.0
+  #   hooks:
+  #     - id: eslint
+  #       additional_dependencies:
+  #         - eslint
+  #         - "@eslint/js"
+  #         - typescript-eslint
+  #         - typescript
+  # Formatting with Prettier
+  # - repo: https://github.com/pre-commit/mirrors-prettier
+  #   rev: v4.0.0-alpha.8
+  #   hooks:
+  #     - id: prettier
+
   # --- Secret Detection ---
   # Detects hardcoded secrets, API keys, and credentials in code
   - repo: https://github.com/gitleaks/gitleaks

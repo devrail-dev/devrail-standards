@@ -16,7 +16,7 @@ The dev-toolchain image is hosted on GitHub Container Registry (GHCR):
 docker pull ghcr.io/devrail-dev/dev-toolchain:v1
 
 # Pull a specific version (for reproducible builds)
-docker pull ghcr.io/devrail-dev/dev-toolchain:v1.3.2
+docker pull ghcr.io/devrail-dev/dev-toolchain:v1.5.0
 ```
 
 ## How It Works with the Makefile
@@ -101,7 +101,7 @@ For projects requiring reproducible builds, pin to an exact semver tag:
 
 ```makefile
 # Pin to an exact version for reproducibility
-DEVRAIL_IMAGE ?= ghcr.io/devrail-dev/dev-toolchain:v1.3.2
+DEVRAIL_IMAGE ?= ghcr.io/devrail-dev/dev-toolchain:v1.5.0
 ```
 
 ### Tagging Strategy
@@ -109,9 +109,9 @@ DEVRAIL_IMAGE ?= ghcr.io/devrail-dev/dev-toolchain:v1.3.2
 | Tag | Example | Behavior |
 |---|---|---|
 | Major floating | `v1` | Updated on every release; non-breaking updates propagate automatically |
-| Exact semver | `v1.3.2` | Immutable; never updated after publication |
+| Exact semver | `v1.5.0` | Immutable; never updated after publication |
 
-Weekly builds publish both an exact semver tag (e.g., `v1.3.2`) and update the floating major tag (`v1`). Breaking changes bump the major version.
+Weekly builds publish both an exact semver tag (e.g., `v1.5.0`) and update the floating major tag (`v1`). Breaking changes bump the major version.
 
 ### Upgrading
 
@@ -119,7 +119,7 @@ To upgrade to a new exact version:
 
 ```makefile
 # Update the version in your Makefile
-DEVRAIL_IMAGE ?= ghcr.io/devrail-dev/dev-toolchain:v1.4.0
+DEVRAIL_IMAGE ?= ghcr.io/devrail-dev/dev-toolchain:v1.5.0
 ```
 
 If you use the floating `v1` tag, upgrades happen automatically when the container image is re-pulled.
@@ -181,6 +181,7 @@ The dev-toolchain container includes all tools needed for every supported langua
 |---|---|
 | trivy | Vulnerability scanning (filesystem and images) |
 | gitleaks | Secret detection |
+| git-cliff | Changelog generation from conventional commits |
 | pre-commit | Git hook management |
 
 ## Running Tools Directly

@@ -1,2 +1,33 @@
-// DevRail custom SCSS variables
-// Override Docsy theme defaults here if needed
+// DevRail — Dark Terminal Theme
+// Override Docsy defaults for a hacker/terminal aesthetic
+
+// --- Color palette ---
+$primary:   #00e5a0;   // Terminal green (main accent)
+$secondary: #0ff;      // Cyan (secondary accent)
+$success:   #00e5a0;   // Green
+$info:      #1a1a2e;   // Deep navy (backgrounds)
+$warning:   #f5a623;   // Amber
+$danger:    #ff3e3e;   // Red
+$light:     #1e1e2e;   // Dark surface
+$dark:      #0d0d1a;   // Near-black
+
+$code-color: #00e5a0;
+$link-color: #00e5a0;
+$link-shade-percentage: 20%;
+
+// Override Bootstrap body colors for dark-first
+$body-bg:    #0d0d1a;
+$body-color: #c8d6e5;
+
+// --- Docsy box colors (homepage sections) ---
+$td-box-colors: #0d0d1a, #111122, #0d0d1a, #111122, #0d0d1a, #111122,
+  #0d0d1a, #111122, #0d0d1a, #111122, #0d0d1a, #111122, #0d0d1a;
+
+// --- Typography ---
+$td-enable-google-fonts: true;
+$google_font_name: "JetBrains Mono";
+$google_font_family: "JetBrains+Mono:300,400,500,700";
+
+// Use monospace for everything — terminal aesthetic
+$font-family-base: "JetBrains Mono", SFMono-Regular, Menlo, Monaco, Consolas,
+  "Liberation Mono", "Courier New", monospace;

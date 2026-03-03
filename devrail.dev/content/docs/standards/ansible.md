@@ -106,3 +106,4 @@ repos:
 - **Role directory structure follows Ansible Galaxy conventions:** `tasks/`, `handlers/`, `defaults/`, `vars/`, `templates/`, `files/`, `meta/`.
 - **Molecule scenarios should be comprehensive.** At minimum, test converge, idempotence, and verify.
 - **All tools are pre-installed in the dev-toolchain container.** Do not install them on the host.
+- For cross-cutting coding practices and git workflow standards that apply to all languages, see [Coding Practices](/docs/standards/practices/).

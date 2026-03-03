@@ -35,20 +35,29 @@ jobs:
             make _check
 
       # Phase 3: Security scans
-      - name: Run trivy image scan (table output)
+      # Blocking scan: OS packages only. We control the base image and can act on
+      # these. ignore-unfixed skips CVEs with no Debian patch available yet.
+      - name: Run trivy OS package scan (blocking)
         uses: aquasecurity/trivy-action@0.28.0
         with:
           image-ref: ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
           severity: CRITICAL,HIGH
+          ignore-unfixed: 'true'
+          vuln-type: os
           exit-code: 1
           format: table
 
-      - name: Run trivy image scan (SARIF output)
+      # Advisory scan: full image (OS + Go binaries + Python packages). Results
+      # are uploaded to the GitHub Security tab for visibility. Not blocking
+      # because Go binary CVEs depend on upstream tool releases we don't control.
+      - name: Run trivy full scan (SARIF, advisory)
         uses: aquasecurity/trivy-action@0.28.0
         if: always()
         with:
           image-ref: ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
           severity: CRITICAL,HIGH
+          ignore-unfixed: 'true'
+          exit-code: 0
           format: sarif
           output: trivy-results.sarif
 
@@ -59,9 +68,12 @@ jobs:
           sarif_file: trivy-results.sarif
 
       - name: Run gitleaks scan
-        uses: gitleaks/gitleaks-action@v2
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          docker run --rm \
+            -v "$(pwd):/workspace" \
+            -w /workspace \
+            ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }} \
+            gitleaks detect --source /workspace --verbose
 
   # Image signing placeholder — actual signing should be added to build.yml
   # when images are published to GHCR. CI builds are local-only and not pushed,

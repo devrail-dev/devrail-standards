@@ -139,3 +139,4 @@ These tools run via `make security` and `make test` in CI pipelines:
 - **bandit and semgrep are complementary.** Bandit catches Python-specific issues, semgrep applies broader security patterns. Both run as part of `make security`.
 - **All tools are pre-installed in the dev-toolchain container.** Do not install them on the host machine.
 - **Python CLIs in DevRail repos use Click** for argument parsing (not argparse).
+- For cross-cutting coding practices and git workflow standards that apply to all languages, see [Coding Practices](/docs/standards/practices/).

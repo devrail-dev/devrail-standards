@@ -51,6 +51,16 @@ test:
     expire_in: 1 week
     when: always
 
+scan:
+  stage: check
+  script:
+    - make _scan
+  artifacts:
+    paths:
+      - .devrail-output/
+    expire_in: 1 week
+    when: always
+
 docs:
   stage: check
   script:

@@ -1,0 +1,286 @@
+// DevRail — Dark Terminal Custom Styles
+
+// --- Global ---
+body {
+  background-color: #0d0d1a;
+  color: #c8d6e5;
+}
+
+// --- Navbar ---
+.td-navbar {
+  background: rgba(13, 13, 26, 0.95) !important;
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid rgba(0, 229, 160, 0.15);
+
+  .navbar-brand {
+    color: #00e5a0 !important;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    font-weight: 700;
+  }
+
+  .nav-link {
+    color: #c8d6e5 !important;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-size: 0.85rem;
+
+    &:hover,
+    &.active {
+      color: #00e5a0 !important;
+    }
+  }
+}
+
+// --- Hero cover ---
+.td-cover-block {
+  background: linear-gradient(
+    135deg,
+    #0d0d1a 0%,
+    #111122 40%,
+    #0a1628 100%
+  ) !important;
+  border-bottom: 1px solid rgba(0, 229, 160, 0.2);
+
+  .display-1,
+  .display-2,
+  .display-3,
+  h1 {
+    color: #00e5a0 !important;
+    text-shadow: 0 0 30px rgba(0, 229, 160, 0.3);
+  }
+
+  p,
+  .lead {
+    color: #c8d6e5 !important;
+  }
+}
+
+// --- Content sections ---
+.td-box {
+  background-color: #0d0d1a;
+  color: #c8d6e5;
+
+  h2,
+  h3,
+  h4 {
+    color: #00e5a0;
+  }
+
+  a {
+    color: #00e5a0;
+
+    &:hover {
+      color: #0ff;
+    }
+  }
+}
+
+// Alternate sections
+.td-box--primary,
+.td-box--dark {
+  background-color: #111122 !important;
+  color: #c8d6e5 !important;
+}
+
+.td-box--light,
+.td-box--white,
+.td-box--0,
+.td-box--4 {
+  background-color: #0d0d1a !important;
+  color: #c8d6e5 !important;
+}
+
+.td-box--secondary,
+.td-box--1 {
+  background-color: #111122 !important;
+  color: #c8d6e5 !important;
+}
+
+// --- Code blocks ---
+pre {
+  background-color: #111122 !important;
+  border: 1px solid rgba(0, 229, 160, 0.15);
+  border-radius: 4px;
+  color: #c8d6e5;
+
+  code {
+    color: #c8d6e5;
+  }
+}
+
+code {
+  color: #00e5a0;
+  background-color: rgba(0, 229, 160, 0.08);
+  padding: 0.15em 0.35em;
+  border-radius: 3px;
+}
+
+pre code {
+  background-color: transparent;
+  padding: 0;
+}
+
+// --- Blockquotes (used for agent prompts) ---
+blockquote {
+  border-left: 3px solid #00e5a0;
+  background-color: rgba(0, 229, 160, 0.05);
+  padding: 1rem 1.5rem;
+  margin: 1rem 0;
+  color: #c8d6e5;
+
+  p {
+    margin-bottom: 0.5rem;
+  }
+}
+
+// --- Tables ---
+// Override Bootstrap/Docsy CSS variables for dark theme readability.
+// Must match Docsy's specificity: .td-content table:not(.td-initial)
+.td-content table:not(.td-initial),
+.td-box table:not(.td-initial),
+table {
+  --bs-table-color: #c8d6e5;
+  --bs-table-striped-color: #c8d6e5;
+  --bs-table-hover-color: #c8d6e5;
+  --bs-table-active-color: #c8d6e5;
+  --bs-table-bg: transparent;
+  --bs-table-striped-bg: rgba(0, 229, 160, 0.03);
+  color: #c8d6e5;
+
+  th {
+    background-color: #111122;
+    color: #00e5a0 !important;
+    border-color: rgba(0, 229, 160, 0.2);
+  }
+
+  td {
+    color: #c8d6e5;
+    border-color: rgba(200, 214, 229, 0.1);
+  }
+
+  tr:hover td {
+    background-color: rgba(0, 229, 160, 0.03);
+  }
+}
+
+// --- Sidebar ---
+.td-sidebar-nav {
+  .td-sidebar-link {
+    color: #8892a0;
+
+    &:hover,
+    &.active {
+      color: #00e5a0 !important;
+    }
+
+    &.td-sidebar-link__page {
+      color: #8892a0;
+    }
+  }
+}
+
+.td-sidebar {
+  border-right: 1px solid rgba(0, 229, 160, 0.1);
+}
+
+// --- Feature blocks (homepage) ---
+.td-box .feature-icon {
+  color: #00e5a0;
+}
+
+.td-box [class*="fa-"] {
+  color: #00e5a0;
+}
+
+// --- Footer ---
+footer {
+  background-color: #0a0a16 !important;
+  border-top: 1px solid rgba(0, 229, 160, 0.15);
+  color: #6b7280;
+
+  a {
+    color: #00e5a0;
+
+    &:hover {
+      color: #0ff;
+    }
+  }
+}
+
+// --- TOC (table of contents) ---
+.td-toc {
+  border-left: 1px solid rgba(0, 229, 160, 0.1);
+
+  a {
+    color: #8892a0;
+
+    &:hover {
+      color: #00e5a0;
+    }
+  }
+
+  .td-heading-self-link {
+    color: rgba(0, 229, 160, 0.4);
+  }
+}
+
+// --- Breadcrumbs ---
+.breadcrumb-item {
+  color: #6b7280;
+
+  a {
+    color: #8892a0;
+
+    &:hover {
+      color: #00e5a0;
+    }
+  }
+
+  &.active {
+    color: #c8d6e5;
+  }
+}
+
+// --- Scrollbar (subtle) ---
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #0d0d1a;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #1e1e2e;
+  border-radius: 4px;
+
+  &:hover {
+    background: #2a2a3e;
+  }
+}
+
+// --- Selection highlight ---
+::selection {
+  background-color: rgba(0, 229, 160, 0.3);
+  color: #fff;
+}
+
+// --- Terminal cursor blink on hero title ---
+.td-cover-block h1::after {
+  content: "_";
+  animation: blink 1s step-end infinite;
+  color: #00e5a0;
+}
+
+@keyframes blink {
+  50% {
+    opacity: 0;
+  }
+}
+
+// --- Link-down arrow ---
+.td-cover-block .td-arrow-down::before {
+  color: #00e5a0;
+}

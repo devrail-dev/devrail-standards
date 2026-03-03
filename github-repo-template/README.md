@@ -1,5 +1,7 @@
 # Project Name
 
+> Built with [DevRail](https://devrail.dev) `v1` standards. See [STABILITY.md](STABILITY.md) for component status.
+
 <!-- TODO: Replace with your project name and one-line description -->
 
 A new project bootstrapped from the [DevRail GitHub template](https://github.com/devrail-dev/github-repo-template).

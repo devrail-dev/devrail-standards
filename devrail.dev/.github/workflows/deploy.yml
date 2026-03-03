@@ -28,6 +28,14 @@ jobs:
         with:
           go-version: '>=1.21'
 
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install PostCSS
+        run: npm install postcss postcss-cli autoprefixer
+
       - name: Build
         run: hugo --minify
 

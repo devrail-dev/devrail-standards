@@ -39,6 +39,9 @@ HAS_PYTHON     := $(filter python,$(LANGUAGES))
 HAS_BASH       := $(filter bash,$(LANGUAGES))
 HAS_TERRAFORM  := $(filter terraform,$(LANGUAGES))
 HAS_ANSIBLE    := $(filter ansible,$(LANGUAGES))
+HAS_RUBY       := $(filter ruby,$(LANGUAGES))
+HAS_GO         := $(filter go,$(LANGUAGES))
+HAS_JAVASCRIPT := $(filter javascript,$(LANGUAGES))
 
 # ---------------------------------------------------------------------------
 # .PHONY declarations
@@ -188,6 +191,71 @@ _lint: _check-config
 			exit $$overall_exit; \
 		fi; \
 	fi; \
+	if [ -n "$(HAS_RUBY)" ]; then \
+		ran_languages="$${ran_languages}\"ruby\","; \
+		rb_files=$$(find . -name '*.rb' -not -path './.git/*' -not -path './vendor/*' -not -path './node_modules/*' 2>/dev/null); \
+		if [ -n "$$rb_files" ]; then \
+			rubocop . || { overall_exit=1; failed_languages="$${failed_languages}\"ruby:rubocop\","; }; \
+		else \
+			echo '{"level":"info","msg":"skipping ruby rubocop lint: no .rb files found","language":"ruby"}' >&2; \
+		fi; \
+		if [ "$(DEVRAIL_FAIL_FAST)" = "1" ] && [ $$overall_exit -ne 0 ]; then \
+			end_time=$$(date +%s%3N); \
+			duration=$$((end_time - start_time)); \
+			echo "{\"target\":\"lint\",\"status\":\"fail\",\"duration_ms\":$$duration,\"languages\":[$${ran_languages%,}],\"failed\":[$${failed_languages%,}]}"; \
+			exit $$overall_exit; \
+		fi; \
+		if [ -n "$$rb_files" ]; then \
+			reek . || { overall_exit=1; failed_languages="$${failed_languages}\"ruby:reek\","; }; \
+		fi; \
+		if [ "$(DEVRAIL_FAIL_FAST)" = "1" ] && [ $$overall_exit -ne 0 ]; then \
+			end_time=$$(date +%s%3N); \
+			duration=$$((end_time - start_time)); \
+			echo "{\"target\":\"lint\",\"status\":\"fail\",\"duration_ms\":$$duration,\"languages\":[$${ran_languages%,}],\"failed\":[$${failed_languages%,}]}"; \
+			exit $$overall_exit; \
+		fi; \
+	fi; \
+	if [ -n "$(HAS_GO)" ]; then \
+		ran_languages="$${ran_languages}\"go\","; \
+		go_files=$$(find . -name '*.go' -not -path './.git/*' -not -path './vendor/*' -not -path './node_modules/*' 2>/dev/null); \
+		if [ -n "$$go_files" ]; then \
+			golangci-lint run ./... || { overall_exit=1; failed_languages="$${failed_languages}\"go\","; }; \
+		else \
+			echo '{"level":"info","msg":"skipping go lint: no .go files found","language":"go"}' >&2; \
+		fi; \
+		if [ "$(DEVRAIL_FAIL_FAST)" = "1" ] && [ $$overall_exit -ne 0 ]; then \
+			end_time=$$(date +%s%3N); \
+			duration=$$((end_time - start_time)); \
+			echo "{\"target\":\"lint\",\"status\":\"fail\",\"duration_ms\":$$duration,\"languages\":[$${ran_languages%,}],\"failed\":[$${failed_languages%,}]}"; \
+			exit $$overall_exit; \
+		fi; \
+	fi; \
+	if [ -n "$(HAS_JAVASCRIPT)" ]; then \
+		ran_languages="$${ran_languages}\"javascript\","; \
+		js_files=$$(find . \( -name '*.js' -o -name '*.jsx' -o -name '*.ts' -o -name '*.tsx' -o -name '*.mjs' -o -name '*.cjs' \) -not -path './.git/*' -not -path './vendor/*' -not -path './node_modules/*' -not -path './dist/*' -not -path './build/*' 2>/dev/null); \
+		if [ -n "$$js_files" ]; then \
+			eslint . || { overall_exit=1; failed_languages="$${failed_languages}\"javascript:eslint\","; }; \
+		else \
+			echo '{"level":"info","msg":"skipping javascript eslint lint: no JS/TS files found","language":"javascript"}' >&2; \
+		fi; \
+		if [ "$(DEVRAIL_FAIL_FAST)" = "1" ] && [ $$overall_exit -ne 0 ]; then \
+			end_time=$$(date +%s%3N); \
+			duration=$$((end_time - start_time)); \
+			echo "{\"target\":\"lint\",\"status\":\"fail\",\"duration_ms\":$$duration,\"languages\":[$${ran_languages%,}],\"failed\":[$${failed_languages%,}]}"; \
+			exit $$overall_exit; \
+		fi; \
+		if [ -f "tsconfig.json" ]; then \
+			tsc --noEmit || { overall_exit=1; failed_languages="$${failed_languages}\"javascript:tsc\","; }; \
+		else \
+			echo '{"level":"info","msg":"skipping tsc type check: no tsconfig.json found","language":"javascript"}' >&2; \
+		fi; \
+		if [ "$(DEVRAIL_FAIL_FAST)" = "1" ] && [ $$overall_exit -ne 0 ]; then \
+			end_time=$$(date +%s%3N); \
+			duration=$$((end_time - start_time)); \
+			echo "{\"target\":\"lint\",\"status\":\"fail\",\"duration_ms\":$$duration,\"languages\":[$${ran_languages%,}],\"failed\":[$${failed_languages%,}]}"; \
+			exit $$overall_exit; \
+		fi; \
+	fi; \
 	end_time=$$(date +%s%3N); \
 	duration=$$((end_time - start_time)); \
 	if [ $$overall_exit -eq 0 ]; then \
@@ -241,6 +309,51 @@ _format: _check-config
 	if [ -n "$(HAS_ANSIBLE)" ]; then \
 		ran_languages="$${ran_languages}\"ansible\","; \
 		echo '{"target":"format","language":"ansible","status":"skip","reason":"no formatter configured"}' >&2; \
+	fi; \
+	if [ -n "$(HAS_RUBY)" ]; then \
+		ran_languages="$${ran_languages}\"ruby\","; \
+		rb_files=$$(find . -name '*.rb' -not -path './.git/*' -not -path './vendor/*' -not -path './node_modules/*' 2>/dev/null); \
+		if [ -n "$$rb_files" ]; then \
+			rubocop --check --fail-level error . || { overall_exit=1; failed_languages="$${failed_languages}\"ruby\","; }; \
+		else \
+			echo '{"level":"info","msg":"skipping ruby format: no .rb files found","language":"ruby"}' >&2; \
+		fi; \
+		if [ "$(DEVRAIL_FAIL_FAST)" = "1" ] && [ $$overall_exit -ne 0 ]; then \
+			end_time=$$(date +%s%3N); \
+			duration=$$((end_time - start_time)); \
+			echo "{\"target\":\"format\",\"status\":\"fail\",\"duration_ms\":$$duration,\"languages\":[$${ran_languages%,}],\"failed\":[$${failed_languages%,}]}"; \
+			exit $$overall_exit; \
+		fi; \
+	fi; \
+	if [ -n "$(HAS_GO)" ]; then \
+		ran_languages="$${ran_languages}\"go\","; \
+		go_files=$$(find . -name '*.go' -not -path './.git/*' -not -path './vendor/*' -not -path './node_modules/*' 2>/dev/null); \
+		if [ -n "$$go_files" ]; then \
+			gofumpt -d . || { overall_exit=1; failed_languages="$${failed_languages}\"go\","; }; \
+		else \
+			echo '{"level":"info","msg":"skipping go format: no .go files found","language":"go"}' >&2; \
+		fi; \
+		if [ "$(DEVRAIL_FAIL_FAST)" = "1" ] && [ $$overall_exit -ne 0 ]; then \
+			end_time=$$(date +%s%3N); \
+			duration=$$((end_time - start_time)); \
+			echo "{\"target\":\"format\",\"status\":\"fail\",\"duration_ms\":$$duration,\"languages\":[$${ran_languages%,}],\"failed\":[$${failed_languages%,}]}"; \
+			exit $$overall_exit; \
+		fi; \
+	fi; \
+	if [ -n "$(HAS_JAVASCRIPT)" ]; then \
+		ran_languages="$${ran_languages}\"javascript\","; \
+		js_files=$$(find . \( -name '*.js' -o -name '*.jsx' -o -name '*.ts' -o -name '*.tsx' -o -name '*.mjs' -o -name '*.cjs' \) -not -path './.git/*' -not -path './vendor/*' -not -path './node_modules/*' -not -path './dist/*' -not -path './build/*' 2>/dev/null); \
+		if [ -n "$$js_files" ]; then \
+			prettier --check . || { overall_exit=1; failed_languages="$${failed_languages}\"javascript\","; }; \
+		else \
+			echo '{"level":"info","msg":"skipping javascript format: no JS/TS files found","language":"javascript"}' >&2; \
+		fi; \
+		if [ "$(DEVRAIL_FAIL_FAST)" = "1" ] && [ $$overall_exit -ne 0 ]; then \
+			end_time=$$(date +%s%3N); \
+			duration=$$((end_time - start_time)); \
+			echo "{\"target\":\"format\",\"status\":\"fail\",\"duration_ms\":$$duration,\"languages\":[$${ran_languages%,}],\"failed\":[$${failed_languages%,}]}"; \
+			exit $$overall_exit; \
+		fi; \
 	fi; \
 	end_time=$$(date +%s%3N); \
 	duration=$$((end_time - start_time)); \
@@ -318,6 +431,51 @@ _test: _check-config
 			exit $$overall_exit; \
 		fi; \
 	fi; \
+	if [ -n "$(HAS_RUBY)" ]; then \
+		if [ -d "spec" ]; then \
+			ran_languages="$${ran_languages}\"ruby\","; \
+			rspec || { overall_exit=1; failed_languages="$${failed_languages}\"ruby\","; }; \
+		else \
+			skipped_languages="$${skipped_languages}\"ruby\","; \
+			echo '{"level":"info","msg":"skipping ruby tests: no spec/ directory found","language":"ruby"}' >&2; \
+		fi; \
+		if [ "$(DEVRAIL_FAIL_FAST)" = "1" ] && [ $$overall_exit -ne 0 ]; then \
+			end_time=$$(date +%s%3N); \
+			duration=$$((end_time - start_time)); \
+			echo "{\"target\":\"test\",\"status\":\"fail\",\"duration_ms\":$$duration,\"languages\":[$${ran_languages%,}],\"failed\":[$${failed_languages%,}],\"skipped\":[$${skipped_languages%,}]}"; \
+			exit $$overall_exit; \
+		fi; \
+	fi; \
+	if [ -n "$(HAS_GO)" ]; then \
+		if find . -name '*_test.go' -not -path './.git/*' -not -path './vendor/*' 2>/dev/null | grep -q .; then \
+			ran_languages="$${ran_languages}\"go\","; \
+			go test ./... || { overall_exit=1; failed_languages="$${failed_languages}\"go\","; }; \
+		else \
+			skipped_languages="$${skipped_languages}\"go\","; \
+			echo '{"level":"info","msg":"skipping go tests: no *_test.go files found","language":"go"}' >&2; \
+		fi; \
+		if [ "$(DEVRAIL_FAIL_FAST)" = "1" ] && [ $$overall_exit -ne 0 ]; then \
+			end_time=$$(date +%s%3N); \
+			duration=$$((end_time - start_time)); \
+			echo "{\"target\":\"test\",\"status\":\"fail\",\"duration_ms\":$$duration,\"languages\":[$${ran_languages%,}],\"failed\":[$${failed_languages%,}],\"skipped\":[$${skipped_languages%,}]}"; \
+			exit $$overall_exit; \
+		fi; \
+	fi; \
+	if [ -n "$(HAS_JAVASCRIPT)" ]; then \
+		if find . \( -name '*.test.*' -o -name '*.spec.*' \) -not -path './.git/*' -not -path './vendor/*' -not -path './node_modules/*' -not -path './dist/*' -not -path './build/*' 2>/dev/null | grep -q .; then \
+			ran_languages="$${ran_languages}\"javascript\","; \
+			vitest run || { overall_exit=1; failed_languages="$${failed_languages}\"javascript\","; }; \
+		else \
+			skipped_languages="$${skipped_languages}\"javascript\","; \
+			echo '{"level":"info","msg":"skipping javascript tests: no *.test.* or *.spec.* files found","language":"javascript"}' >&2; \
+		fi; \
+		if [ "$(DEVRAIL_FAIL_FAST)" = "1" ] && [ $$overall_exit -ne 0 ]; then \
+			end_time=$$(date +%s%3N); \
+			duration=$$((end_time - start_time)); \
+			echo "{\"target\":\"test\",\"status\":\"fail\",\"duration_ms\":$$duration,\"languages\":[$${ran_languages%,}],\"failed\":[$${failed_languages%,}],\"skipped\":[$${skipped_languages%,}]}"; \
+			exit $$overall_exit; \
+		fi; \
+	fi; \
 	end_time=$$(date +%s%3N); \
 	duration=$$((end_time - start_time)); \
 	if [ -z "$${ran_languages}" ] && [ -n "$${skipped_languages}" ]; then \
@@ -377,6 +535,61 @@ _security: _check-config
 	if [ -n "$(HAS_ANSIBLE)" ]; then \
 		skipped_languages="$${skipped_languages}\"ansible\","; \
 		echo '{"level":"info","msg":"skipping ansible security: no language-specific scanner","language":"ansible"}' >&2; \
+	fi; \
+	if [ -n "$(HAS_RUBY)" ]; then \
+		ran_languages="$${ran_languages}\"ruby\","; \
+		if [ -f "config/application.rb" ]; then \
+			brakeman -q || { overall_exit=1; failed_languages="$${failed_languages}\"ruby:brakeman\","; }; \
+		else \
+			echo '{"level":"info","msg":"skipping brakeman: not a Rails application","language":"ruby"}' >&2; \
+		fi; \
+		if [ "$(DEVRAIL_FAIL_FAST)" = "1" ] && [ $$overall_exit -ne 0 ]; then \
+			end_time=$$(date +%s%3N); \
+			duration=$$((end_time - start_time)); \
+			echo "{\"target\":\"security\",\"status\":\"fail\",\"duration_ms\":$$duration,\"languages\":[$${ran_languages%,}],\"failed\":[$${failed_languages%,}]}"; \
+			exit $$overall_exit; \
+		fi; \
+		if [ -f "Gemfile.lock" ]; then \
+			bundler-audit check || { overall_exit=1; failed_languages="$${failed_languages}\"ruby:bundler-audit\","; }; \
+		else \
+			echo '{"level":"info","msg":"skipping bundler-audit: no Gemfile.lock found","language":"ruby"}' >&2; \
+		fi; \
+		if [ "$(DEVRAIL_FAIL_FAST)" = "1" ] && [ $$overall_exit -ne 0 ]; then \
+			end_time=$$(date +%s%3N); \
+			duration=$$((end_time - start_time)); \
+			echo "{\"target\":\"security\",\"status\":\"fail\",\"duration_ms\":$$duration,\"languages\":[$${ran_languages%,}],\"failed\":[$${failed_languages%,}]}"; \
+			exit $$overall_exit; \
+		fi; \
+	fi; \
+	if [ -n "$(HAS_GO)" ]; then \
+		if [ -f "go.sum" ]; then \
+			ran_languages="$${ran_languages}\"go\","; \
+			govulncheck ./... || { overall_exit=1; failed_languages="$${failed_languages}\"go:govulncheck\","; }; \
+		else \
+			skipped_languages="$${skipped_languages}\"go\","; \
+			echo '{"level":"info","msg":"skipping govulncheck: no go.sum found","language":"go"}' >&2; \
+		fi; \
+		if [ "$(DEVRAIL_FAIL_FAST)" = "1" ] && [ $$overall_exit -ne 0 ]; then \
+			end_time=$$(date +%s%3N); \
+			duration=$$((end_time - start_time)); \
+			echo "{\"target\":\"security\",\"status\":\"fail\",\"duration_ms\":$$duration,\"languages\":[$${ran_languages%,}],\"failed\":[$${failed_languages%,}]}"; \
+			exit $$overall_exit; \
+		fi; \
+	fi; \
+	if [ -n "$(HAS_JAVASCRIPT)" ]; then \
+		if [ -f "package-lock.json" ]; then \
+			ran_languages="$${ran_languages}\"javascript\","; \
+			npm audit --audit-level=moderate || { overall_exit=1; failed_languages="$${failed_languages}\"javascript:npm-audit\","; }; \
+		else \
+			skipped_languages="$${skipped_languages}\"javascript\","; \
+			echo '{"level":"info","msg":"skipping npm audit: no package-lock.json found","language":"javascript"}' >&2; \
+		fi; \
+		if [ "$(DEVRAIL_FAIL_FAST)" = "1" ] && [ $$overall_exit -ne 0 ]; then \
+			end_time=$$(date +%s%3N); \
+			duration=$$((end_time - start_time)); \
+			echo "{\"target\":\"security\",\"status\":\"fail\",\"duration_ms\":$$duration,\"languages\":[$${ran_languages%,}],\"failed\":[$${failed_languages%,}]}"; \
+			exit $$overall_exit; \
+		fi; \
 	fi; \
 	end_time=$$(date +%s%3N); \
 	duration=$$((end_time - start_time)); \
