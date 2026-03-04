@@ -91,6 +91,32 @@ Follow the dominant convention for each language:
 
 1. **Log errors before propagating.** Use the appropriate logging mechanism (`log_error`, Python `logging`, etc.) so errors are visible in structured output even if the caller catches and handles them.
 
+## Check Failures
+
+When a lint, format, security, or test check fails, the correct response is always to **fix the root cause**. Never suppress, disable, or work around a failing check to make CI green.
+
+### Rules
+
+1. **Fix the issue, not the symptom.** If `cargo clippy` or `eslint` reports a warning, fix the code. If `cargo audit` or `bandit` reports a vulnerability, update the dependency or remediate the code.
+
+2. **No blanket suppressions.** Do not add `# noqa`, `# nosec`, `// nolint`, `#tfsec:ignore`, `allow_failure: true`, `continue-on-error: true`, `--skip-check`, or equivalent annotations to make a check pass without fixing the issue.
+
+3. **False positives require documented justification.** If a finding is a confirmed false positive, suppress it using the tool's designated mechanism (e.g., `.gitleaksignore`, inline `#tfsec:ignore` comment) **and** include a comment explaining why it is a false positive. Undocumented suppressions will be flagged in code review.
+
+4. **Never comment out failing code.** Commenting out code that triggers a lint or security finding is not a fix. It is hiding the problem and removing functionality.
+
+5. **Never remove checks.** Do not delete linter rules, remove CI stages, or drop tools from `.devrail.yml` to avoid failures.
+
+### Anti-Patterns
+
+| Anti-Pattern | Correct Response |
+|---|---|
+| Adding `# noqa` / `# nosec` without explanation | Fix the code or document why it's a false positive |
+| Setting CI job to `allow_failure: true` | Fix the failing check |
+| Commenting out code that triggers a security finding | Remediate the vulnerability |
+| Removing a language from `.devrail.yml` to skip checks | Fix the issues in that language |
+| Adding `--skip-check` flags to CI commands | Fix the finding or document the false positive |
+
 ## Testing Standards
 
 ### Test Pyramid
