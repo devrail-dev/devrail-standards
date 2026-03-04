@@ -20,7 +20,7 @@ This document defines the complete schema for `.devrail.yml`, the project config
 
 **Description:** Declares which languages are used in the project. This list drives which linters, formatters, security scanners, and test runners are executed by Makefile targets and CI jobs.
 
-**Allowed values:** `python`, `bash`, `terraform`, `ansible`, `ruby`, `go`, `javascript`
+**Allowed values:** `python`, `bash`, `terraform`, `ansible`, `ruby`, `go`, `javascript`, `rust`
 
 **Validation rules:**
 
@@ -254,7 +254,28 @@ javascript:
   type_check: tsc
 ```
 
-### Full Seven-Language Project
+### Single-Language Project (Rust)
+
+A Rust project using defaults:
+
+```yaml
+# .devrail.yml — Rust project
+languages:
+  - rust
+
+fail_fast: false
+log_format: json
+
+rust:
+  linter: clippy
+  formatter: rustfmt
+  security:
+    - cargo-audit
+    - cargo-deny
+  test: cargo-test
+```
+
+### Full Eight-Language Project
 
 A project using all supported languages:
 
@@ -268,6 +289,7 @@ languages:
   - ruby
   - go
   - javascript
+  - rust
 
 fail_fast: true
 log_format: json
@@ -313,21 +335,29 @@ javascript:
   security: npm-audit
   test: vitest
   type_check: tsc
+
+rust:
+  linter: clippy
+  formatter: rustfmt
+  security:
+    - cargo-audit
+    - cargo-deny
+  test: cargo-test
 ```
 
 ## Language Support Matrix
 
 The following table shows the default tool for each concern per language. These are the tools included in the `dev-toolchain` container.
 
-| Concern | Python | Bash | Terraform | Ansible | Ruby | Go | JavaScript |
-|---|---|---|---|---|---|---|---|
-| Linter | ruff | shellcheck | tflint | ansible-lint | rubocop, reek | golangci-lint | eslint |
-| Formatter | ruff format | shfmt | terraform fmt | -- | rubocop | gofumpt | prettier |
-| Security | bandit, semgrep | -- | tfsec, checkov | -- | brakeman, bundler-audit | govulncheck | npm audit |
-| Tests | pytest | bats | terratest | molecule | rspec | go test | vitest |
-| Type Check | mypy | -- | -- | -- | sorbet | -- | tsc |
-| Docs | -- | -- | terraform-docs | -- | -- | -- | -- |
-| Universal | trivy, gitleaks | trivy, gitleaks | trivy, gitleaks | trivy, gitleaks | trivy, gitleaks | trivy, gitleaks | trivy, gitleaks |
+| Concern | Python | Bash | Terraform | Ansible | Ruby | Go | JavaScript | Rust |
+|---|---|---|---|---|---|---|---|---|
+| Linter | ruff | shellcheck | tflint | ansible-lint | rubocop, reek | golangci-lint | eslint | clippy |
+| Formatter | ruff format | shfmt | terraform fmt | -- | rubocop | gofumpt | prettier | rustfmt |
+| Security | bandit, semgrep | -- | tfsec, checkov | -- | brakeman, bundler-audit | govulncheck | npm audit | cargo-audit, cargo-deny |
+| Tests | pytest | bats | terratest | molecule | rspec | go test | vitest | cargo test |
+| Type Check | mypy | -- | -- | -- | sorbet | -- | tsc | -- |
+| Docs | -- | -- | terraform-docs | -- | -- | -- | -- | -- |
+| Universal | trivy, gitleaks | trivy, gitleaks | trivy, gitleaks | trivy, gitleaks | trivy, gitleaks | trivy, gitleaks | trivy, gitleaks | trivy, gitleaks |
 
 **Notes:**
 
