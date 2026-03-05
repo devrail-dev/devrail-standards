@@ -6,6 +6,7 @@
 |---|---|---|
 | Linter | tflint | Latest in container |
 | Formatter | terraform fmt | Latest in container |
+| Formatter | terragrunt hclfmt | Latest in container (when `terragrunt.hcl` files present) |
 | Security | tfsec | Latest in container |
 | Security | checkov | Latest in container |
 | Tests | terratest | Latest in container |
@@ -81,6 +82,20 @@ func TestTerraformModule(t *testing.T) {
 }
 ```
 
+### terragrunt hclfmt
+
+No config file required. Terragrunt is a companion tool that runs automatically when `terragrunt.hcl` files are detected in the project. It formats Terragrunt HCL files to a canonical style.
+
+```bash
+# Check formatting (exits non-zero if files need formatting)
+terragrunt hclfmt --terragrunt-check
+
+# Apply formatting
+terragrunt hclfmt
+```
+
+Projects that do not use Terragrunt are unaffected — the formatter is silently skipped when no `terragrunt.hcl` files exist.
+
 ### terraform-docs
 
 No config file required for default operation. Generates markdown documentation from Terraform module inputs, outputs, and descriptions.
@@ -98,7 +113,9 @@ Output is injected between markers in `README.md`:
 |---|---|---|
 | `_lint` | `tflint --recursive` | Lint all Terraform configurations |
 | `_format` | `terraform fmt -check -recursive` | Check formatting (no changes) |
-| `_format` (fix) | `terraform fmt -recursive` | Apply formatting fixes |
+| `_format` | `terragrunt hclfmt --terragrunt-check` | Check Terragrunt formatting (when `terragrunt.hcl` present) |
+| `_fix` | `terraform fmt -recursive` | Apply formatting fixes |
+| `_fix` | `terragrunt hclfmt` | Apply Terragrunt formatting fixes (when `terragrunt.hcl` present) |
 | `_security` | `tfsec .` | Security scanning for Terraform |
 | `_security` | `checkov -d .` | Policy-as-code scanning |
 | `_test` | `cd tests && go test -v -timeout 30m` | Run terratest suite |
@@ -119,6 +136,8 @@ repos:
     hooks:
       - id: terraform_fmt
       - id: terraform_tflint
+      # Uncomment if using Terragrunt:
+      # - id: terragrunt_fmt
 ```
 
 ### CI-Only

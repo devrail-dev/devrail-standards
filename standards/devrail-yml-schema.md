@@ -352,7 +352,7 @@ The following table shows the default tool for each concern per language. These 
 | Concern | Python | Bash | Terraform | Ansible | Ruby | Go | JavaScript | Rust |
 |---|---|---|---|---|---|---|---|---|
 | Linter | ruff | shellcheck | tflint | ansible-lint | rubocop, reek | golangci-lint | eslint | clippy |
-| Formatter | ruff format | shfmt | terraform fmt | -- | rubocop | gofumpt | prettier | rustfmt |
+| Formatter | ruff format | shfmt | terraform fmt, terragrunt hclfmt | -- | rubocop | gofumpt | prettier | rustfmt |
 | Security | bandit, semgrep | -- | tfsec, checkov | -- | brakeman, bundler-audit | govulncheck | npm audit | cargo-audit, cargo-deny |
 | Tests | pytest | bats | terratest | molecule | rspec | go test | vitest | cargo test |
 | Type Check | mypy | -- | -- | -- | sorbet | -- | tsc | -- |
@@ -364,6 +364,7 @@ The following table shows the default tool for each concern per language. These 
 - "Universal" tools run for all languages and are not language-specific overrides
 - A `--` entry means the concern does not apply to that language
 - Default tools are used when no per-language override is specified
+- `terraform` includes Terragrunt formatting (`terragrunt hclfmt`) — no separate language entry needed. Terragrunt formatting runs automatically when `terragrunt.hcl` files are detected
 
 ## Exit Codes
 

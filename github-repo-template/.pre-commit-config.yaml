@@ -39,6 +39,8 @@ repos:
   #   hooks:
   #     - id: terraform_fmt
   #     - id: terraform_tflint
+  #     # Uncomment if using Terragrunt:
+  #     # - id: terragrunt_fmt
 
   # --- Ruby (uncomment if languages includes ruby) ---
   # Linting and formatting with rubocop
