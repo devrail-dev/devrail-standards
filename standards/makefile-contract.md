@@ -43,25 +43,25 @@ test                 Run all tests
 
 #### `lint`
 
-Runs all linters for the languages declared in `.devrail.yml`. Delegates to the dev-toolchain container where the `_lint` internal target executes language-specific linters (e.g., `ruff check` for Python, `shellcheck` for Bash, `tflint` for Terraform, `ansible-lint` for Ansible).
+Runs all linters for the languages declared in `.devrail.yml`. Delegates to the dev-toolchain container where the `_lint` internal target executes language-specific linters (e.g., `ruff check` for Python, `shellcheck` for Bash, `tflint` for Terraform, `ansible-lint` for Ansible, `rubocop` and `reek` for Ruby, `golangci-lint` for Go, `eslint` and `tsc` for JavaScript/TypeScript, `cargo clippy` for Rust).
 
 #### `format`
 
-Runs all formatters for the declared languages. Delegates to the container where `_format` executes tools like `ruff format` for Python, `shfmt` for Bash, and `terraform fmt` for Terraform.
+Runs all formatters for the declared languages. Delegates to the container where `_format` executes tools like `ruff format` for Python, `shfmt` for Bash, `terraform fmt` and `terragrunt hclfmt` for Terraform, `rubocop` for Ruby, `gofumpt` for Go, `prettier` for JavaScript/TypeScript, and `cargo fmt` for Rust.
 
 #### `fix`
 
-Applies all formatters in write mode for the languages declared in `.devrail.yml`. Unlike `format` (which only checks), `fix` modifies files in-place. Delegates to the container where `_fix` executes tools like `ruff format` for Python, `shfmt -w` for Bash, `terraform fmt` for Terraform, `rubocop -a` for Ruby, `gofumpt -w` for Go, and `prettier --write` for JavaScript.
+Applies all formatters in write mode for the languages declared in `.devrail.yml`. Unlike `format` (which only checks), `fix` modifies files in-place. Delegates to the container where `_fix` executes tools like `ruff format` for Python, `shfmt -w` for Bash, `terraform fmt` and `terragrunt hclfmt` for Terraform, `rubocop -a` for Ruby, `gofumpt -w` for Go, `prettier --write` for JavaScript, and `cargo fmt` for Rust.
 
 This target is intentionally excluded from `make check` because `check` must be a read-only operation. Run `make fix` manually when you want to auto-remediate formatting issues reported by `make format`.
 
 #### `test`
 
-Runs the project test suite. Delegates to the container where `_test` executes test runners like `pytest` for Python, `bats` for Bash, `terratest` for Terraform, and `molecule` for Ansible.
+Runs the project test suite. Delegates to the container where `_test` executes test runners like `pytest` for Python, `bats` for Bash, `terratest` for Terraform, `molecule` for Ansible, `rspec` for Ruby, `go test` for Go, `vitest` for JavaScript/TypeScript, and `cargo test` for Rust.
 
 #### `security`
 
-Runs language-specific security scanners. Delegates to the container where `_security` executes tools like `bandit` and `semgrep` for Python, and `tfsec` and `checkov` for Terraform.
+Runs language-specific security scanners. Delegates to the container where `_security` executes tools like `bandit` and `semgrep` for Python, `tfsec` and `checkov` for Terraform, `brakeman` and `bundler-audit` for Ruby, `govulncheck` for Go, `npm audit` for JavaScript/TypeScript, and `cargo audit` and `cargo deny` for Rust.
 
 #### `scan`
 
@@ -405,34 +405,54 @@ install-hooks: ## Install pre-commit hooks
 # Internal targets
 _lint:
 	# Language-specific linting (driven by .devrail.yml languages list)
-	# Python:    ruff check .
-	# Bash:      shellcheck scripts/*.sh
-	# Terraform: tflint
-	# Ansible:   ansible-lint
+	# Python:     ruff check .
+	# Bash:       shellcheck scripts/*.sh
+	# Terraform:  tflint
+	# Ansible:    ansible-lint
+	# Ruby:       rubocop, reek
+	# Go:         golangci-lint run ./...
+	# JavaScript: eslint, tsc --noEmit
+	# Rust:       cargo clippy
 
 _format:
 	# Language-specific format checking (driven by .devrail.yml languages list)
-	# Python:    ruff format --check .
-	# Bash:      shfmt -d scripts/*.sh
-	# Terraform: terraform fmt -check -recursive
+	# Python:     ruff format --check .
+	# Bash:       shfmt -d scripts/*.sh
+	# Terraform:  terraform fmt -check -recursive, terragrunt hclfmt --terragrunt-check
+	# Ruby:       rubocop --check
+	# Go:         gofumpt -d .
+	# JavaScript: prettier --check .
+	# Rust:       cargo fmt --all -- --check
 
 _fix:
 	# Language-specific format fixing (driven by .devrail.yml languages list)
-	# Python:    ruff format .
-	# Bash:      shfmt -w scripts/*.sh
-	# Terraform: terraform fmt -recursive
+	# Python:     ruff format .
+	# Bash:       shfmt -w scripts/*.sh
+	# Terraform:  terraform fmt -recursive, terragrunt hclfmt
+	# Ruby:       rubocop -a .
+	# Go:         gofumpt -w .
+	# JavaScript: prettier --write .
+	# Rust:       cargo fmt --all
 
 _test:
 	# Language-specific tests (driven by .devrail.yml languages list)
-	# Python:    pytest
-	# Bash:      bats tests/
-	# Terraform: go test ./tests/...
-	# Ansible:   molecule test
+	# Python:     pytest
+	# Bash:       bats tests/
+	# Terraform:  go test ./tests/...
+	# Ansible:    molecule test
+	# Ruby:       rspec
+	# Go:         go test ./...
+	# JavaScript: vitest run
+	# Rust:       cargo test --all-targets
 
 _security:
 	# Language-specific security scanning (driven by .devrail.yml languages list)
-	# Python:    bandit -r . && semgrep --config auto .
-	# Terraform: tfsec . && checkov -d .
+	# Python:     bandit -r . && semgrep --config auto .
+	# Terraform:  tfsec . && checkov -d .
+	# Ruby:       brakeman, bundler-audit
+	# Go:         govulncheck ./...
+	# JavaScript: npm audit
+	# Rust:       cargo audit, cargo deny check
 
 _scan:
 	# Universal scanning (runs for all projects)
@@ -459,3 +479,7 @@ _check: _lint _format _test _security _scan _docs
 - [Bash Standards](bash.md) -- Bash-specific tooling
 - [Terraform Standards](terraform.md) -- Terraform-specific tooling
 - [Ansible Standards](ansible.md) -- Ansible-specific tooling
+- [Ruby Standards](ruby.md) -- Ruby-specific tooling
+- [Go Standards](go.md) -- Go-specific tooling
+- [JavaScript Standards](javascript.md) -- JavaScript/TypeScript-specific tooling
+- [Rust Standards](rust.md) -- Rust-specific tooling
