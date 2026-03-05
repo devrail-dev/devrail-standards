@@ -516,6 +516,7 @@ Every repo includes an `.editorconfig` file that defines formatting rules (inden
 |---|---|---|
 | Linter | **tflint** | Terraform-specific linting rules |
 | Formatter | **terraform fmt** | Canonical formatting |
+| Formatter | **terragrunt hclfmt** | Terragrunt HCL formatting (when `terragrunt.hcl` files present) |
 | Security | **tfsec**, **checkov** | Infrastructure security scanning |
 | Tests | **terratest** | Go-based infrastructure testing |
 | Docs | **terraform-docs** | Auto-generate module documentation |

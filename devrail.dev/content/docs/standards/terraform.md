@@ -2,7 +2,7 @@
 title: "Terraform Standards"
 linkTitle: "Terraform"
 weight: 30
-description: "Terraform tooling standards: tflint, terraform fmt, tfsec, checkov, terratest, and terraform-docs."
+description: "Terraform tooling standards: tflint, terraform fmt, terragrunt hclfmt, tfsec, checkov, terratest, and terraform-docs."
 ---
 
 ## Tools
@@ -11,6 +11,7 @@ description: "Terraform tooling standards: tflint, terraform fmt, tfsec, checkov
 |---|---|---|
 | Linting | tflint | Terraform-specific linting rules |
 | Formatting | terraform fmt | Canonical HCL formatting |
+| Formatting | terragrunt hclfmt | Terragrunt HCL formatting (when `terragrunt.hcl` present) |
 | Security | tfsec | Terraform-focused security scanning |
 | Security | checkov | Policy-as-code scanning |
 | Testing | terratest | Go-based infrastructure testing |
@@ -110,6 +111,20 @@ func TestTerraformModule(t *testing.T) {
 
 The `tests/` directory must contain a `go.mod` file for the test module.
 
+### terragrunt hclfmt
+
+No config file required. Terragrunt is a companion tool that runs automatically when `terragrunt.hcl` files are detected in the project. It formats Terragrunt HCL files to a canonical style.
+
+```bash
+# Check formatting (exits non-zero if files need formatting)
+terragrunt hclfmt --terragrunt-check
+
+# Apply formatting
+terragrunt hclfmt
+```
+
+Projects that do not use Terragrunt are unaffected — the formatter is silently skipped when no `terragrunt.hcl` files exist.
+
 ### terraform-docs
 
 No config file required for default operation. Generates markdown documentation from Terraform module inputs, outputs, and descriptions.
@@ -134,6 +149,8 @@ terraform-docs markdown table . > README.md
 |---|---|---|
 | `make lint` | `tflint --recursive` | Lint all Terraform configurations |
 | `make format` | `terraform fmt -check -recursive` | Check formatting (no changes) |
+| `make format` | `terragrunt hclfmt --terragrunt-check` | Check Terragrunt formatting (when `terragrunt.hcl` present) |
+| `make fix` | `terragrunt hclfmt` | Apply Terragrunt formatting fixes (when `terragrunt.hcl` present) |
 | `make security` | `tfsec .` | Security scanning for Terraform |
 | `make security` | `checkov -d .` | Policy-as-code scanning |
 | `make test` | `cd tests && go test -v -timeout 30m` | Run terratest suite |
@@ -153,6 +170,8 @@ repos:
     hooks:
       - id: terraform_fmt
       - id: terraform_tflint
+      # Uncomment if using Terragrunt:
+      # - id: terragrunt_fmt
 ```
 
 ### CI-Only (too slow for local hooks)
@@ -164,7 +183,7 @@ repos:
 
 ## Notes
 
-- **`terraform fmt` is the only accepted formatter.** Do not use third-party HCL formatters.
+- **`terraform fmt` is the only accepted formatter** for `.tf` files. Do not use third-party HCL formatters. Terragrunt HCL files (`terragrunt.hcl`) are formatted by `terragrunt hclfmt`.
 - **Both `tfsec` and `checkov` run as part of `make security`.** They are complementary: tfsec focuses on Terraform-specific misconfigurations, checkov applies broader policy-as-code rules.
 - **`terraform-docs` runs as part of `make docs`.** Place `<!-- BEGIN_TF_DOCS -->` / `<!-- END_TF_DOCS -->` markers in your `README.md`.
 - **`terratest` tests are written in Go.** The `tests/` directory must contain a `go.mod` file.
