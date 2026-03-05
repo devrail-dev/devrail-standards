@@ -10,7 +10,7 @@ Sections are wrapped in HTML comment markers (`<!-- devrail:section-name -->` / 
 
 ## Critical Rules
 
-These six rules are non-negotiable. Every developer and every AI agent must follow them without exception.
+These eight rules are non-negotiable. Every developer and every AI agent must follow them without exception.
 
 1. **Run `make check` before completing any story or task.** Never mark work done without passing checks. This is the single gate for all linting, formatting, security, and test validation.
 
@@ -23,6 +23,10 @@ These six rules are non-negotiable. Every developer and every AI agent must foll
 5. **Write idempotent scripts.** Every script must be safe to re-run. Check before acting: `command -v tool || install_tool`, `mkdir -p`, guard file writes with existence checks.
 
 6. **Use the shared logging library.** No raw `echo` for status messages. Use `log_info`, `log_warn`, `log_error`, `log_debug`, and `die` from `lib/log.sh`.
+
+7. **Never suppress failing checks.** When a lint, format, security, or test check fails, fix the underlying issue. Never comment out code, add suppression annotations (`# noqa`, `# nosec`, `#tfsec:ignore`, `// nolint`), disable rules, or mark CI jobs as allowed-to-fail to bypass a failing check. If a finding is a confirmed false positive, document the justification inline alongside the tool's designated suppression mechanism.
+
+8. **Update documentation when changing behavior.** When a change affects public interfaces, configuration, CLI usage, or setup steps, update the relevant documentation (README, DEVELOPMENT.md, inline docs) in the same commit or PR. Do not leave documentation out of sync with code.
 
 <!-- /devrail:critical-rules -->
 
@@ -572,7 +576,7 @@ All AI agents (Claude, Cursor, OpenCode, Windsurf, and others) operating on DevR
 
 1. **Read this document first.** Agent shim files (CLAUDE.md, AGENTS.md, .cursorrules, .opencode/) point here. This is the canonical source.
 
-2. **Follow the Critical Rules.** The six rules in the [Critical Rules](#critical-rules) section are inlined in every agent shim file. There is no excuse for missing them.
+2. **Follow the Critical Rules.** The eight rules in the [Critical Rules](#critical-rules) section are inlined in every agent shim file. There is no excuse for missing them.
 
 3. **Run `make check` and fix all issues before declaring work complete.** Do not rely on CI to catch problems.
 

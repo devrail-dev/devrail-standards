@@ -24,12 +24,12 @@ CLAUDE.md / AGENTS.md / .cursorrules / .opencode/agents.yaml
     │
     ├── Points to DEVELOPMENT.md (full standards reference)
     │
-    └── Inlines 6 critical rules (minimum viable compliance)
+    └── Inlines 8 critical rules (minimum viable compliance)
 ```
 
 **Agents that follow cross-file references** (like Claude Code) will read DEVELOPMENT.md and get the complete picture -- language-specific tooling, Makefile contract, shell conventions, everything.
 
-**Agents that ignore cross-file references** still get the six critical rules inlined directly in their instruction file. This ensures minimum compliance regardless of agent capability.
+**Agents that ignore cross-file references** still get the eight critical rules inlined directly in their instruction file. This ensures minimum compliance regardless of agent capability.
 
 ## Setting Up a Project for Agent Use
 
@@ -94,7 +94,7 @@ If you do not want to commit DevRail files yet, you can paste instructions direc
 When an agent reads the project's CLAUDE.md (or equivalent), it learns:
 
 1. **DEVELOPMENT.md is the canonical reference.** It contains the full Makefile contract, per-language tooling, shell conventions, and logging standards.
-2. **Six critical rules must always be followed.** These are inlined so the agent cannot miss them.
+2. **Eight critical rules must always be followed.** These are inlined so the agent cannot miss them.
 3. **`make check` is the single gate.** No task is complete until it passes.
 4. **Everything runs in Docker.** The agent should never try to install tools on the host.
 
