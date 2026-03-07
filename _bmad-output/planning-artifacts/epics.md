@@ -918,3 +918,45 @@ So that I can confidently release DevRail for public use.
 **And** pushing to either template triggers CI that passes
 **And** pre-commit hooks fire on first commit and enforce all rules
 **And** an AI agent given the project follows standards without additional prompting
+
+## Backlog — Post-MVP Stories
+
+Stories added after MVP shipped to address gaps discovered during active use.
+
+### Story 4.5: Update Conventional Commit Scopes for All Languages
+
+As a developer,
+I want the pre-commit conventional commits hook to accept all current language scopes,
+So that commits for Ruby, Go, JavaScript, Rust, and new workflow scopes are not rejected.
+
+**Acceptance Criteria:**
+
+**Given** the pre-commit-conventional-commits hook repo at github.com/devrail-dev/
+**When** the valid scopes list is updated
+**Then** it accepts all language scopes: python, bash, terraform, ansible, ruby, go, javascript, rust
+**And** it accepts all workflow scopes: container, ci, makefile, standards, security, changelog, release
+**And** the updated hook version is referenced in both template repos' `.pre-commit-config.yaml`
+**And** the dev-toolchain repo's `.pre-commit-config.yaml` references the updated hook
+**And** `make check` passes on all repos after the update
+
+**Repos:** pre-commit-conventional-commits, dev-toolchain, github-repo-template, gitlab-repo-template
+
+### Story 2.6: Cut Dev-Toolchain Release for Post-v1.5.0 Features
+
+As a maintainer,
+I want to cut a proper minor release for all features merged since v1.5.0,
+So that the published container image includes Rust, Terragrunt, fix target, pre-push hooks, tool version manifest, and the release script.
+
+**Acceptance Criteria:**
+
+**Given** all post-v1.5.0 features are merged to main and `make check` passes
+**When** `make release VERSION=1.6.0` is run
+**Then** CHANGELOG.md is updated with all [Unreleased] entries under [1.6.0]
+**And** the tag v1.6.0 is created and pushed
+**And** GitHub Actions builds and publishes the container image to GHCR
+**And** the v1 floating tag is updated to point to v1.6.0
+**And** the GitHub Release is created with release notes
+**And** the tool version manifest is attached to the release
+
+**Repos:** dev-toolchain
+**Depends on:** Story 4.5 (so the release commit uses the correct scope)
