@@ -941,7 +941,7 @@ So that commits for Ruby, Go, JavaScript, Rust, and new workflow scopes are not 
 
 **Repos:** pre-commit-conventional-commits, dev-toolchain, github-repo-template, gitlab-repo-template
 
-### Story 2.6: Cut Dev-Toolchain Release for Post-v1.5.0 Features
+### Story 2.10: Cut Dev-Toolchain Release for Post-v1.5.0 Features
 
 As a maintainer,
 I want to cut a proper minor release for all features merged since v1.5.0,
@@ -960,3 +960,4 @@ So that the published container image includes Rust, Terragrunt, fix target, pre
 
 **Repos:** dev-toolchain
 **Depends on:** Story 4.5 (so the release commit uses the correct scope)
+**Story ID:** 2.10 (numbering continues after original Epic 2 stories 2.1–2.9)
