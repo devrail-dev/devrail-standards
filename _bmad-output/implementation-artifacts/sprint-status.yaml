@@ -110,3 +110,23 @@ development_status:
   9-2-write-contribution-guide-with-language-ecosystem-pattern: done
   9-3-end-to-end-ecosystem-validation: done
   epic-9-retrospective: optional
+
+  epic-10: in-progress
+  10-1-configure-gitlab-github-mirror-ci: ready-for-dev
+  10-2-fix-version-manifest-ci-job: ready-for-dev
+  10-3-write-v160-release-blog-post: ready-for-dev
+  epic-10-retrospective: optional
+
+  epic-11: backlog
+  11-1-design-devrail-init-cli: ready-for-dev
+  11-2-implement-devrail-init-core: backlog
+  11-3-distribute-and-document-devrail-init: backlog
+  epic-11-retrospective: optional
+
+  epic-12: backlog
+  12-1-add-language-ecosystem-template: backlog
+  epic-12-retrospective: optional
+
+  epic-13: backlog
+  13-1-design-plugin-architecture: backlog
+  epic-13-retrospective: optional
