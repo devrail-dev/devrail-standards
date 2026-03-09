@@ -1,6 +1,6 @@
 # Story 10.3: Write v1.6.0 Release Blog Post
 
-Status: ready-for-dev
+Status: done
 
 ## Story
 
@@ -18,17 +18,17 @@ so that users understand the new capabilities available in the latest dev-toolch
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Write the blog post (AC: 1, 2, 3)
-  - [ ] 1.1 Review existing blog posts for format and tone (`2026-03-02-introducing-devrail.md`, Rust post, Terragrunt post)
-  - [ ] 1.2 Write post covering: Rust ecosystem (clippy, rustfmt, cargo-audit, cargo-deny), Terragrunt companion tool, `make fix` target, pre-push hooks, `make release` script, tool version manifest, conventional commit scope update (v1.1.0)
-  - [ ] 1.3 Include container pull command and upgrade instructions
-  - [ ] 1.4 Include link to full CHANGELOG
+- [x] Task 1: Write the blog post (AC: 1, 2, 3)
+  - [x] 1.1 Review existing blog posts for format and tone (`2026-03-02-introducing-devrail.md`, Rust post, Terragrunt post)
+  - [x] 1.2 Write post covering: Rust ecosystem (clippy, rustfmt, cargo-audit, cargo-deny), Terragrunt companion tool, `make fix` target, pre-push hooks, `make release` script, tool version manifest, conventional commit scope update (v1.1.0)
+  - [x] 1.3 Include container pull command and upgrade instructions
+  - [x] 1.4 Include link to full CHANGELOG
 
-- [ ] Task 2: Create PR and deploy (AC: 4, 5)
-  - [ ] 2.1 Create feature branch in devrail.dev repo
-  - [ ] 2.2 Run `make check` to validate
-  - [ ] 2.3 Create PR and merge after CI passes
-  - [ ] 2.4 Verify deployment to devrail.dev
+- [x] Task 2: Create PR and deploy (AC: 4, 5)
+  - [x] 2.1 Create feature branch in devrail.dev repo
+  - [x] 2.2 Run `make check` to validate
+  - [x] 2.3 Create PR and merge after CI passes
+  - [x] 2.4 Verify deployment to devrail.dev
 
 ## Dev Notes
 
@@ -50,8 +50,21 @@ so that users understand the new capabilities available in the latest dev-toolch
 
 ### Agent Model Used
 
+Claude Opus 4.6
+
 ### Debug Log References
+
+- Reviewed 4 existing blog posts for format/tone consistency
+- `make check` passed on devrail.dev repo
 
 ### Completion Notes List
 
+- Blog post written at `content/blog/2026-03-09-v160-release.md` with Hugo front matter (title, date, description)
+- Post structure: overview → language/tool additions (links to Rust/Terragrunt posts) → new Makefile targets (make fix, make release, pre-push hooks) → workflow improvements (version manifests, git-cliff, scope update) → upgrade instructions → CHANGELOG link
+- Matches existing blog post format: clean technical prose, code examples, no emojis
+- PR #13 created on devrail.dev: https://github.com/devrail-dev/devrail.dev/pull/13
+- Deployment verified: post live at https://devrail.dev/blog/2026/03/v1.6.0-release/
+
 ### File List
+
+- `devrail.dev/content/blog/2026-03-09-v160-release.md` — new blog post (created)
