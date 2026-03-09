@@ -112,7 +112,7 @@ development_status:
   epic-9-retrospective: optional
 
   epic-10: in-progress
-  10-1-configure-gitlab-github-mirror-ci: ready-for-dev
+  10-1-configure-gitlab-github-mirror-ci: done
   10-2-fix-version-manifest-ci-job: ready-for-dev
   10-3-write-v160-release-blog-post: ready-for-dev
   epic-10-retrospective: optional

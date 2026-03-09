@@ -1,6 +1,6 @@
 # Story 10.1: Configure GitLab-to-GitHub Mirror CI
 
-Status: ready-for-dev
+Status: done
 
 ## Story
 
