@@ -48,7 +48,7 @@ development_status:
   1-5-write-makefile-contract-and-readme: done
   epic-1-retrospective: optional
 
-  epic-2: in-progress
+  epic-2: done
   2-1-initialize-repository-with-multi-stage-dockerfile-and-shared-libraries: done
   2-2-python-tooling-install-script: done
   2-3-bash-tooling-install-script: done
@@ -58,7 +58,7 @@ development_status:
   2-7-multi-arch-build-and-ghcr-publishing: done
   2-8-automated-weekly-builds: done
   2-9-container-self-validation: done
-  2-10-cut-dev-toolchain-release: ready-for-dev
+  2-10-cut-dev-toolchain-release: done
   epic-2-retrospective: optional
 
   epic-3: done
@@ -69,12 +69,12 @@ development_status:
   3-5-implement-make-check-orchestration: done
   epic-3-retrospective: optional
 
-  epic-4: in-progress
+  epic-4: done
   4-1-verify-and-update-conventional-commits-hook: done
   4-2-configure-language-appropriate-linting-and-formatting-hooks: done
   4-3-add-gitleaks-and-terraform-docs-hooks: done
   4-4-create-make-install-hooks-target: done
-  4-5-update-conventional-commit-scopes: ready-for-dev
+  4-5-update-conventional-commit-scopes: done
   epic-4-retrospective: optional
 
   epic-5: done
