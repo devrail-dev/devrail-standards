@@ -111,10 +111,10 @@ development_status:
   9-3-end-to-end-ecosystem-validation: done
   epic-9-retrospective: optional
 
-  epic-10: in-progress
+  epic-10: done
   10-1-configure-gitlab-github-mirror-ci: done
-  10-2-fix-version-manifest-ci-job: review
-  10-3-write-v160-release-blog-post: ready-for-dev
+  10-2-fix-version-manifest-ci-job: done
+  10-3-write-v160-release-blog-post: done
   epic-10-retrospective: optional
 
   epic-11: backlog
