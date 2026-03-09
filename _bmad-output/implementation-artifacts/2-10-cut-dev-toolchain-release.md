@@ -1,6 +1,6 @@
 # Story 2.10: Cut Dev-Toolchain Release for Post-v1.5.0 Features
 
-Status: ready-for-dev
+Status: done
 
 ## Story
 

@@ -1,6 +1,6 @@
 # Story 4.5: Update Conventional Commit Scopes for All Languages
 
-Status: ready-for-dev
+Status: done
 
 ## Story
 
