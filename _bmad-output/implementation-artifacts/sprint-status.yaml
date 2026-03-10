@@ -120,7 +120,7 @@ development_status:
   epic-11: in-progress
   11-1-design-devrail-init-cli: done
   11-2-implement-devrail-init-core: done
-  11-3-distribute-and-document-devrail-init: backlog
+  11-3-distribute-and-document-devrail-init: review
   epic-11-retrospective: optional
 
   epic-12: backlog
