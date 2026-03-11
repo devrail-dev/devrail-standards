@@ -117,10 +117,10 @@ development_status:
   10-3-write-v160-release-blog-post: done
   epic-10-retrospective: optional
 
-  epic-11: in-progress
+  epic-11: done
   11-1-design-devrail-init-cli: done
   11-2-implement-devrail-init-core: done
-  11-3-distribute-and-document-devrail-init: review
+  11-3-distribute-and-document-devrail-init: done
   epic-11-retrospective: optional
 
   epic-12: backlog

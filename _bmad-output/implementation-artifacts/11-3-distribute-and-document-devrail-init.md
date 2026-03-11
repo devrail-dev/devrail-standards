@@ -1,6 +1,6 @@
 # Story 11.3: Distribute and Document `devrail init`
 
-Status: review
+Status: done
 
 ## Story
 
