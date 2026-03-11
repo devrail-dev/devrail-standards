@@ -1,6 +1,6 @@
 # Story 11.2: Implement `devrail init` Core Script
 
-Status: review
+Status: done
 
 ## Story
 
