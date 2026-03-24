@@ -123,10 +123,19 @@ development_status:
   11-3-distribute-and-document-devrail-init: done
   epic-11-retrospective: optional
 
-  epic-12: backlog
-  12-1-add-language-ecosystem-template: backlog
+  epic-12: in-progress
+  12-1-add-language-ecosystem-template: done
+  12-2-add-swift-container-support: done
+  12-3-add-kotlin-container-support: done
   epic-12-retrospective: optional
 
-  epic-13: backlog
-  13-1-design-plugin-architecture: backlog
+  epic-13: in-progress
+  13-1-design-plugin-architecture: ready-for-dev
   epic-13-retrospective: optional
+
+  epic-14: done
+  14-1-add-swift-language-ecosystem: done
+  14-2-write-swift-support-blog-post: done
+  14-3-add-kotlin-language-ecosystem: done
+  14-4-write-kotlin-support-blog-post: done
+  epic-14-retrospective: optional

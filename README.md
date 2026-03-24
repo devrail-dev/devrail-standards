@@ -49,6 +49,8 @@ The `standards/` directory contains the canonical reference documents for all De
 | [go.md](standards/go.md) | Go tooling standards (golangci-lint, gofumpt, govulncheck, go test) |
 | [javascript.md](standards/javascript.md) | JavaScript/TypeScript tooling standards (eslint, prettier, npm audit, vitest, tsc) |
 | [rust.md](standards/rust.md) | Rust tooling standards (clippy, rustfmt, cargo-audit, cargo-deny, cargo test) |
+| [swift.md](standards/swift.md) | Swift tooling standards (SwiftLint, swift-format, swift test, xcodebuild) |
+| [kotlin.md](standards/kotlin.md) | Kotlin tooling standards (ktlint, detekt, Gradle, Android Lint) |
 | [universal.md](standards/universal.md) | Universal security tools (trivy, gitleaks) |
 | [coding-practices.md](standards/coding-practices.md) | General coding principles, naming, error handling, testing, and dependencies |
 | [git-workflow.md](standards/git-workflow.md) | Branch strategy, pull requests, code review, merge policy, and git security |
