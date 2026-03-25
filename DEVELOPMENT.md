@@ -274,6 +274,8 @@ type(scope): description
 | `ruby` | Ruby tooling, configs, or standards |
 | `go` | Go tooling, configs, or standards |
 | `javascript` | JavaScript/TypeScript tooling, configs, or standards |
+| `swift` | Swift tooling, configs, or standards |
+| `kotlin` | Kotlin tooling, configs, or standards |
 | `container` | Dev-toolchain container image |
 | `ci` | CI/CD pipeline configuration |
 | `makefile` | Makefile targets and patterns |

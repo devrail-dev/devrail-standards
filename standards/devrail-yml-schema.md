@@ -20,7 +20,7 @@ This document defines the complete schema for `.devrail.yml`, the project config
 
 **Description:** Declares which languages are used in the project. This list drives which linters, formatters, security scanners, and test runners are executed by Makefile targets and CI jobs.
 
-**Allowed values:** `python`, `bash`, `terraform`, `ansible`, `ruby`, `go`, `javascript`, `rust`
+**Allowed values:** `python`, `bash`, `terraform`, `ansible`, `ruby`, `go`, `javascript`, `rust`, `swift`, `kotlin`
 
 **Validation rules:**
 
@@ -349,15 +349,15 @@ rust:
 
 The following table shows the default tool for each concern per language. These are the tools included in the `dev-toolchain` container.
 
-| Concern | Python | Bash | Terraform | Ansible | Ruby | Go | JavaScript | Rust |
-|---|---|---|---|---|---|---|---|---|
-| Linter | ruff | shellcheck | tflint | ansible-lint | rubocop, reek | golangci-lint | eslint | clippy |
-| Formatter | ruff format | shfmt | terraform fmt, terragrunt hclfmt | -- | rubocop | gofumpt | prettier | rustfmt |
-| Security | bandit, semgrep | -- | tfsec, checkov | -- | brakeman, bundler-audit | govulncheck | npm audit | cargo-audit, cargo-deny |
-| Tests | pytest | bats | terratest | molecule | rspec | go test | vitest | cargo test |
-| Type Check | mypy | -- | -- | -- | sorbet | -- | tsc | -- |
-| Docs | -- | -- | terraform-docs | -- | -- | -- | -- | -- |
-| Universal | trivy, gitleaks | trivy, gitleaks | trivy, gitleaks | trivy, gitleaks | trivy, gitleaks | trivy, gitleaks | trivy, gitleaks | trivy, gitleaks |
+| Concern | Python | Bash | Terraform | Ansible | Ruby | Go | JavaScript | Rust | Swift | Kotlin |
+|---|---|---|---|---|---|---|---|---|---|---|
+| Linter | ruff | shellcheck | tflint | ansible-lint | rubocop, reek | golangci-lint | eslint | clippy | SwiftLint | ktlint, detekt |
+| Formatter | ruff format | shfmt | terraform fmt, terragrunt hclfmt | -- | rubocop | gofumpt | prettier | rustfmt | swift-format | ktlint |
+| Security | bandit, semgrep | -- | tfsec, checkov | -- | brakeman, bundler-audit | govulncheck | npm audit | cargo-audit, cargo-deny | -- | OWASP dependency-check |
+| Tests | pytest | bats | terratest | molecule | rspec | go test | vitest | cargo test | swift test | gradle test |
+| Type Check | mypy | -- | -- | -- | sorbet | -- | tsc | -- | -- | -- |
+| Docs | -- | -- | terraform-docs | -- | -- | -- | -- | -- | -- | -- |
+| Universal | trivy, gitleaks | trivy, gitleaks | trivy, gitleaks | trivy, gitleaks | trivy, gitleaks | trivy, gitleaks | trivy, gitleaks | trivy, gitleaks | trivy, gitleaks | trivy, gitleaks |
 
 **Notes:**
 
