@@ -1,6 +1,6 @@
 # Story 13.1: Design Plugin Architecture for Community Extensions
 
-Status: ready-for-dev
+Status: review
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -22,48 +22,48 @@ so that I can contribute language support or tool integrations without modifying
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Research extension patterns in comparable tools (AC: 1, 5)
-  - [ ] 1.1 Analyze how **pre-commit** handles third-party hooks: repo-based discovery, hook manifest (`hooks.yaml`), isolation model, version pinning
-  - [ ] 1.2 Analyze how **ESLint** handles plugins: npm package convention (`eslint-plugin-*`), rule registration, shared configs, flat config composition
-  - [ ] 1.3 Analyze how **Terraform providers** handle plugins: registry-based discovery, versioned binaries, provider manifest, required_providers block
-  - [ ] 1.4 Analyze how **GitHub Actions** handle reusable components: `action.yml` manifest, composite actions, marketplace distribution
-  - [ ] 1.5 Summarize patterns: discovery mechanisms, manifest formats, isolation strategies, version management, backwards compatibility approaches
+- [x] Task 1: Research extension patterns in comparable tools (AC: 1, 5)
+  - [x] 1.1 Analyze how **pre-commit** handles third-party hooks
+  - [x] 1.2 Analyze how **ESLint** handles plugins
+  - [x] 1.3 Analyze how **Terraform providers** handle plugins
+  - [x] 1.4 Analyze how **GitHub Actions** handle reusable components
+  - [x] 1.5 Summarize patterns into a comparison table
 
-- [ ] Task 2: Identify extension points in current DevRail architecture (AC: 1, 4, 5)
-  - [ ] 2.1 Map Makefile extension points: how `_lint`, `_format`, `_test`, `_security`, `_fix` iterate over languages; where a plugin could register a new language block
-  - [ ] 2.2 Map Dockerfile extension points: how tools are installed; options for extending (multi-stage COPY, sidecar containers, volume mounts, runtime install)
-  - [ ] 2.3 Map `.devrail.yml` extension points: how the schema could accept plugin-defined languages; per-language override mechanism
-  - [ ] 2.4 Map pre-commit extension points: how `.pre-commit-config.yaml` includes external repos; how plugins could register hooks
-  - [ ] 2.5 Map CI pipeline extension points: how GitHub Actions/GitLab CI could include plugin-defined jobs
-  - [ ] 2.6 Map `devrail init` extension points: how the init script could discover and scaffold plugin config
+- [x] Task 2: Identify extension points in current DevRail architecture (AC: 1, 4, 5)
+  - [x] 2.1 Map Makefile extension points (`HAS_<LANG>` blocks across `_lint`/`_format`/`_fix`/`_test`/`_security`/`_init`)
+  - [x] 2.2 Map Dockerfile extension points (multi-stage `<lang>-builder`, runtime APT, install scripts)
+  - [x] 2.3 Map `.devrail.yml` extension points (`languages:` list + per-language overrides + new `plugins:` section)
+  - [x] 2.4 Map pre-commit extension points (per-language hook entries in templates)
+  - [x] 2.5 Map CI pipeline extension points (per-language extras like Rails Postgres rspec job)
+  - [x] 2.6 Map `devrail init` extension points (`ALL_LANGUAGES` constant, scaffolding via `_init`)
 
-- [ ] Task 3: Design the plugin interface (AC: 1, 2, 3, 4)
-  - [ ] 3.1 Define **plugin manifest format** (`plugin.devrail.yml` or similar) specifying: language name, tool binaries, Makefile target commands, pre-commit hooks, config file templates, gating conditions
-  - [ ] 3.2 Define **Makefile integration pattern**: how plugins register language blocks in `_lint`/`_format`/`_test`/`_security` without modifying the core Makefile (options: include files, dynamic target generation, plugin directory scanning)
-  - [ ] 3.3 Define **container integration pattern**: how plugins add tools to the image (options: extending base image, sidecar container, volume-mounted binaries, runtime install via plugin script)
-  - [ ] 3.4 Define **`.devrail.yml` extension mechanism**: how `languages:` accepts plugin-defined entries; how per-language overrides work for plugin languages
-  - [ ] 3.5 Define **`make check` aggregation**: how plugin check results are collected and included in the composite pass/fail decision
-  - [ ] 3.6 Define **plugin versioning and distribution**: how plugins are versioned, discovered, and installed (options: git repos, registry, directory convention)
+- [x] Task 3: Design the plugin interface (AC: 1, 2, 3, 4)
+  - [x] 3.1 Define **plugin manifest format** (`plugin.devrail.yml`) — schema_version, name, version, devrail_min_version, container, targets, gates, pre_commit, init_scaffolds, tool_versions
+  - [x] 3.2 Define **Makefile integration pattern** — embedded execution loop in core Makefile that iterates plugin manifests
+  - [x] 3.3 Define **container integration pattern** — extended-image with auto-generated `Dockerfile.devrail`
+  - [x] 3.4 Define **`.devrail.yml` extension mechanism** — `plugins:` section with `source`/`rev`/`languages` + lockfile
+  - [x] 3.5 Define **`make check` aggregation** — plugin results enter existing `ran_languages` / `failed_languages` / JSON summary path
+  - [x] 3.6 Define **plugin versioning and distribution** — git-only v1, source-address triple, immutable refs, lockfile
 
-- [ ] Task 4: Evaluate container integration strategies (AC: 5)
-  - [ ] 4.1 **Option A: Extended image** -- Dockerfile `FROM ghcr.io/devrail-dev/dev-toolchain:v1` + plugin install. Pros: simple, single container. Cons: rebuild per-project, no standard distribution.
-  - [ ] 4.2 **Option B: Sidecar containers** -- Plugin tools run in separate containers alongside dev-toolchain. Pros: isolation, independent versioning. Cons: complex orchestration, shared filesystem issues.
-  - [ ] 4.3 **Option C: Volume-mounted plugins** -- Plugin binaries mounted into dev-toolchain container at runtime. Pros: no image rebuild. Cons: host dependency, platform compatibility.
-  - [ ] 4.4 **Option D: Runtime install** -- `make check` runs plugin install script inside container before execution. Pros: zero build step. Cons: slow first run, network dependency.
-  - [ ] 4.5 **Recommendation**: Evaluate each against DevRail's core constraints (single container, reproducible, CI-compatible, fast) and recommend the winning approach with rationale
+- [x] Task 4: Evaluate container integration strategies (AC: 5)
+  - [x] 4.1 **Option A: Extended image** — evaluated
+  - [x] 4.2 **Option B: Sidecar containers** — evaluated
+  - [x] 4.3 **Option C: Volume-mounted plugins** — evaluated
+  - [x] 4.4 **Option D: Runtime install** — evaluated
+  - [x] 4.5 **Recommendation: Option A (Extended image)** — rationale documented
 
-- [ ] Task 5: Write the design document (AC: 6, 7)
-  - [ ] 5.1 Create `_bmad-output/planning-artifacts/plugin-architecture-design.md`
-  - [ ] 5.2 Include sections: Overview, Extension Points, Plugin Manifest, Makefile Integration, Container Integration, Distribution & Versioning, Example Walkthrough, Migration Path, Open Questions
-  - [ ] 5.3 Include architecture diagrams (ASCII or mermaid) showing plugin discovery and execution flow
-  - [ ] 5.4 Include complete example: a hypothetical "Elixir plugin" showing manifest, Makefile snippet, Dockerfile extension, and `.devrail.yml` usage
-  - [ ] 5.5 Include migration path from current monolithic approach to plugin-capable architecture (backwards compatible)
-  - [ ] 5.6 Document trade-offs and rationale for each design decision
+- [x] Task 5: Write the design document (AC: 6, 7)
+  - [x] 5.1 Created `_bmad-output/planning-artifacts/plugin-architecture-design.md`
+  - [x] 5.2 All required sections included (Overview, Research Summary, Extension Surface, Plugin Manifest, Project Configuration, Plugin Lifecycle, Make-Check Aggregation, Per-Language Tool Override, Container Integration, Distribution & Versioning, Security Model, Example Walkthrough, Migration Path, Open Questions)
+  - [x] 5.3 ASCII architecture diagram included for plugin lifecycle
+  - [x] 5.4 Complete Elixir plugin example walkthrough (manifest, install script, consumer adoption, first run, override, upgrade)
+  - [x] 5.5 Three-phase migration path from monolith to plugin-first (`v1.10.0` → `v1.11.0` → `v2.0.0`)
+  - [x] 5.6 Trade-offs documented for each container option, manifest field, and versioning axis
 
-- [ ] Task 6: Review and finalize (AC: 7)
-  - [ ] 6.1 Self-review against acceptance criteria
-  - [ ] 6.2 Verify design preserves all current DevRail guarantees (make check gates everything, container is authoritative, conventional commits enforced)
-  - [ ] 6.3 Mark story as review
+- [x] Task 6: Review and finalize (AC: 7)
+  - [x] 6.1 Self-review against all 7 acceptance criteria — see Completion Notes
+  - [x] 6.2 Design preserves DevRail guarantees: `make check` is the single gate, container is authoritative, immutable refs, JSON summary unchanged
+  - [x] 6.3 Story marked as review
 
 ## Dev Notes
 
@@ -165,4 +165,28 @@ Claude Opus 4.6
 - Research sources identified for each comparable tool
 - Plugin manifest strawman provides concrete starting point for design discussions
 
+**Story 13.1 design output (2026-04-27):**
+
+- Design document created: `_bmad-output/planning-artifacts/plugin-architecture-design.md`
+- All 7 acceptance criteria addressed:
+  - **AC1** (extension points, interfaces, lifecycle) — covered in *Plugin Lifecycle*, *Plugin Manifest*, and *Current DevRail Extension Surface*
+  - **AC2** (custom language without forking dev-toolchain) — covered end-to-end in *Example Walkthrough — An Elixir Plugin*
+  - **AC3** (override default tools) — covered in *Per-Language Tool Override*
+  - **AC4** (`make check` still aggregates) — covered in *Make-Check Aggregation* (plugin results join existing `ran_languages`/`failed_languages`/JSON summary)
+  - **AC5** (compatible with container toolchain) — covered in *Container Integration* with four strategies evaluated; Option A (extended image) recommended
+  - **AC6** (example walkthrough) — covered in *Example Walkthrough — An Elixir Plugin* (5 steps from authoring to upgrade)
+  - **AC7** (design merged to planning-artifacts) — file lives in `_bmad-output/planning-artifacts/plugin-architecture-design.md`; story moved to `review` status pending acceptance
+- Research sources used: pre-commit, ESLint plugins, Terraform providers, GitHub Actions custom actions
+- Key design decisions:
+  - Plugin distribution: git repos with source-address triple (`host/namespace/name`), immutable `rev:` refs, content-hashed lockfile
+  - Container integration: extended image (`FROM ghcr.io/devrail-dev/dev-toolchain:v1` + plugin layers) — preserves "one container, one make check"
+  - Manifest: single `plugin.devrail.yml` with `schema_version: 1`, `devrail_min_version`, `targets`, `gates`, `container`, `pre_commit`, `init_scaffolds`, `tool_versions`
+  - Migration: three-phase rollout (`v1.10.0` adds loader, `v1.11.0` extracts Kotlin as reference plugin, `v2.0.0` removes monolithic `HAS_<LANG>` blocks)
+- Open questions explicitly enumerated for follow-up stories (registry, signing, parallel execution, plugin-to-plugin deps, standards-doc auto-generation, CI services, devrail-init integration)
+- No code changes in this story; implementation stories will follow from the migration phasing
+
 ### File List
+
+- `_bmad-output/planning-artifacts/plugin-architecture-design.md` — created
+- `_bmad-output/implementation-artifacts/13-1-design-plugin-architecture.md` — updated (status, task checkboxes, completion notes)
+- `_bmad-output/implementation-artifacts/sprint-status.yaml` — updated (`13-1` → `review`)
