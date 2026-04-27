@@ -30,7 +30,7 @@ require:
   - rubocop-performance
 
 AllCops:
-  TargetRubyVersion: 3.1
+  TargetRubyVersion: 3.4
   NewCops: enable
   Exclude:
     - "db/schema.rb"
