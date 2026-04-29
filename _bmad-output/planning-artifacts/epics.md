@@ -961,3 +961,141 @@ So that the published container image includes Rust, Terragrunt, fix target, pre
 **Repos:** dev-toolchain
 **Depends on:** Story 4.5 (so the release commit uses the correct scope)
 **Story ID:** 2.10 (numbering continues after original Epic 2 stories 2.1–2.9)
+
+## Epic 13: Plugin Architecture for Community Extensions
+
+**Status:** in-progress
+**Phase:** Post-MVP — fulfills PRD §"Phase 3: Community & Platform Integration"
+**Design:** [`plugin-architecture-design.md`](plugin-architecture-design.md)
+
+**Epic Goal:** Enable community contributors to add language ecosystems and replace tools without forking any DevRail core repo. Preserve the "one container, one `make check`" guarantee throughout.
+
+**Migration Strategy:** Three-phase rollout per the design doc:
+- **`v1.10.0`** — introduce plugin loader; all core languages remain compiled-in (back-compat)
+- **`v1.11.0`** — extract one core language (Kotlin) as reference plugin
+- **`v2.0.0`** — retire monolithic `HAS_<LANG>` blocks; all languages become plugins (breaking change)
+
+### Story 13.1: Design Plugin Architecture for Community Extensions
+
+**Status:** review
+
+As a community contributor, I want a clear plugin architecture for extending DevRail with custom tools and languages, so that I can contribute language support or tool integrations without modifying core repos.
+
+See `_bmad-output/implementation-artifacts/13-1-design-plugin-architecture.md` for full AC and `plugin-architecture-design.md` for the resulting design.
+
+**Repos:** dev-toolchain (consumer of design)
+
+### Story 13.2: Implement Plugin Manifest Parser and Loader
+
+As a maintainer, I want the dev-toolchain Makefile to discover and validate plugin manifests declared in `.devrail.yml`, so that downstream targets can iterate plugin definitions safely.
+
+**Acceptance Criteria:**
+
+**Given** a `.devrail.yml` with a `plugins:` section
+**When** `make check` runs
+**Then** each plugin's `plugin.devrail.yml` is fetched, parsed, and schema-validated (schema_version=1)
+**And** `devrail_min_version` is enforced against the running container version
+**And** invalid manifests fail fast before any tool runs
+**And** the JSON event log includes structured `plugin-loader` events for each resolution step
+
+**Repos:** dev-toolchain
+**Phase:** v1.10.0
+
+### Story 13.3: Implement Plugin Resolver and Lockfile
+
+As a maintainer, I want plugin sources resolved to immutable refs and recorded in a lockfile, so that builds are reproducible across machines and CI.
+
+**Acceptance Criteria:**
+
+**Given** `.devrail.yml` declares plugins with `rev:` (tag or SHA)
+**When** `make plugins-update` runs
+**Then** every `rev:` is resolved to a SHA and content-hash, written to `.devrail.lock`
+**And** branch refs are rejected with a clear error
+**And** `make check` refuses to run if `.devrail.yml` and `.devrail.lock` disagree
+**And** plugin repos are content-addressed in `~/.cache/devrail/plugins/<sha>` (host) or `/opt/devrail/plugins/<sha>` (container)
+
+**Repos:** dev-toolchain
+**Phase:** v1.10.0
+
+### Story 13.4: Implement Extended-Image Build Pipeline
+
+As a maintainer, I want `make check` to auto-build a project-local image extending the core dev-toolchain image with each declared plugin's container fragment, so that plugin tools are available alongside core tools in a single container.
+
+**Acceptance Criteria:**
+
+**Given** a project with one or more plugins declared in `.devrail.yml`
+**When** `make check` runs
+**Then** a `Dockerfile.devrail` is generated layering plugin `apt_packages`, `copy_from_builder`, `install_script`, and `env` directives onto `ghcr.io/devrail-dev/dev-toolchain:v1`
+**And** the resulting image is tagged `devrail-local:<hash-of-plugin-set>` and built via BuildKit
+**And** unchanged plugin sets reuse the cached image (no rebuild)
+**And** the build step's progress and outcome are reported as JSON events
+
+**Repos:** dev-toolchain
+**Phase:** v1.10.0
+
+### Story 13.5: Implement Plugin Execution Loop and JSON Aggregation
+
+As a maintainer, I want each plugin's targets executed within the existing `_lint`/`_format`/`_fix`/`_test`/`_security` blocks, with results aggregated into the existing JSON summary, so that consumers see plugin and core results uniformly.
+
+**Acceptance Criteria:**
+
+**Given** a plugin with `targets:` and `gates:` defined
+**When** `make _lint` (or any target) runs inside the project-local image
+**Then** the per-plugin gate is evaluated against project files
+**And** the plugin's `cmd` is executed if the gate passes
+**And** results enter the existing `ran_languages`/`failed_languages`/JSON summary path
+**And** `DEVRAIL_FAIL_FAST=1` short-circuits on plugin failures the same as core
+**And** per-language tool overrides in `.devrail.yml` replace the plugin's default `cmd`
+
+**Repos:** dev-toolchain
+**Phase:** v1.10.0
+
+### Story 13.6: Cut v1.10.0 Release with Plugin Loader
+
+As a maintainer, I want a `v1.10.0` release that bundles the plugin loader, resolver, build pipeline, and execution loop, so that consumers can adopt the plugin model on a stable image tag.
+
+**Acceptance Criteria:**
+
+**Given** Stories 13.2–13.5 are merged and `make check` passes
+**When** `make release VERSION=1.10.0` is run
+**Then** CHANGELOG documents the plugin architecture under "Added"
+**And** `standards/devrail-yml-schema.md` documents the `plugins:` section
+**And** `standards/contributing.md` includes a "Contributing a plugin" section
+**And** a devrail.dev blog post announces the feature
+**And** the v1 floating tag advances to v1.10.0
+
+**Repos:** dev-toolchain, OrgDocs/development-standards, devrail.dev
+**Phase:** v1.10.0
+**Depends on:** 13.2, 13.3, 13.4, 13.5
+
+### Story 13.7: Extract Kotlin as Reference Plugin
+
+**Status (placeholder — to be elaborated when v1.10.0 lands):**
+Prove the model end-to-end by moving Kotlin tooling out of the dev-toolchain image into a `devrail-plugin-kotlin` repo. Document the extraction recipe so other languages can follow.
+
+**Phase:** v1.11.0
+**Depends on:** 13.6
+
+### Story 13.8: Cut v1.11.0 Release with Reference Plugin Extraction Recipe
+
+**Status (placeholder):**
+Release v1.11.0 with the Kotlin extraction proven and the contributor-facing extraction recipe documented.
+
+**Phase:** v1.11.0
+**Depends on:** 13.7
+
+### Story 13.9: Retire Monolithic HAS_<LANG> Blocks (v2.0.0)
+
+**Status (placeholder — major version bump):**
+Remove all `HAS_<LANG>` blocks from the core Makefile. All language support becomes plugin-based. Provide an automated migration tool: `devrail-init migrate --to v2`. Major version bump.
+
+**Phase:** v2.0.0
+**Depends on:** 13.7, 13.8
+
+### Story 13.10: Plugin Signing (Open Question Follow-up)
+
+**Status (placeholder — lowest priority of the open questions):**
+Add `cosign`-style signature verification for plugin release tags. Opt-in via `plugin_signature_required: true` in `.devrail.yml`. Defer until a real supply-chain incident or until enabled-by-default in dependency tooling more broadly.
+
+**Phase:** post-v2.0.0 / open-question follow-up
+**Depends on:** 13.9
