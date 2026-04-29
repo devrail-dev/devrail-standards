@@ -131,6 +131,15 @@ development_status:
 
   epic-13: in-progress
   13-1-design-plugin-architecture: review
+  13-2-implement-plugin-manifest-parser-and-loader: backlog
+  13-3-implement-plugin-resolver-and-lockfile: backlog
+  13-4-implement-extended-image-build-pipeline: backlog
+  13-5-implement-plugin-execution-loop-and-json-aggregation: backlog
+  13-6-cut-v1-10-0-release-with-plugin-loader: backlog
+  13-7-extract-kotlin-as-reference-plugin: backlog
+  13-8-cut-v1-11-0-release-with-reference-plugin-extraction-recipe: backlog
+  13-9-retire-monolithic-has-lang-blocks: backlog
+  13-10-plugin-signing: backlog
   epic-13-retrospective: optional
 
   epic-14: done

@@ -80,6 +80,16 @@ Developer infrastructure — multi-repo ecosystem. No single application framewo
 
 ## Core Architectural Decisions
 
+### Plugin Architecture (Phase 3)
+
+DevRail's monolithic-image model is intentional for the MVP and post-MVP core
+language set, but Phase 3 (per PRD §"Phase 3: Community & Platform Integration")
+introduces a plugin architecture for community-contributed languages and tools.
+The design lives in a companion document: see
+[`plugin-architecture-design.md`](plugin-architecture-design.md). Implementation
+is staged across `v1.10.0` (loader), `v1.11.0` (reference plugin extraction),
+and `v2.0.0` (monolithic-block retirement, breaking change) — see Epic 13.
+
 ### Decision Priority Analysis
 
 **Critical Decisions (Block Implementation):**
