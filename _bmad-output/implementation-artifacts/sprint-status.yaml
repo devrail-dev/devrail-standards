@@ -131,7 +131,7 @@ development_status:
 
   epic-13: in-progress
   13-1-design-plugin-architecture: review
-  13-2-implement-plugin-manifest-parser-and-loader: backlog
+  13-2-implement-plugin-manifest-parser-and-loader: ready-for-dev
   13-3-implement-plugin-resolver-and-lockfile: backlog
   13-4-implement-extended-image-build-pipeline: backlog
   13-5-implement-plugin-execution-loop-and-json-aggregation: backlog
