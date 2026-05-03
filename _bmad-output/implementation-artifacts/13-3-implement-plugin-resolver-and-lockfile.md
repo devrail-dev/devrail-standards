@@ -1,6 +1,6 @@
 # Story 13.3: Implement Plugin Resolver and Lockfile
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -326,3 +326,54 @@ Claude Opus 4.7 (1M context) — single-session execution via `/bmad-bmm-dev-sto
 |---|---|
 | 2026-05-01 | Story created via `/bmad-bmm-create-story` (status: ready-for-dev) |
 | 2026-05-03 | Implementation completed via `/bmad-bmm-dev-story`; status moved to `review`; PR #34 opened on dev-toolchain |
+| 2026-05-03 | Senior-developer review completed via `/bmad-bmm-code-review`; 12 findings (1 HIGH, 5 MED, 6 LOW); all addressed via PR #35 (`fix/13-3-review-followups`); status moved to `done` |
+
+## Senior Developer Review (AI)
+
+**Reviewer:** Matthew (review executed by Opus 4.7 — same model that implemented the story; see caveat)
+**Date:** 2026-05-03
+**Outcome:** Approve (after follow-up fix PR #35)
+
+### Caveat
+
+Same model that wrote the implementation also performed the review. Findings skew toward checklist-sweep rather than independent insight. A future review under a different model is welcome and may surface additional issues.
+
+### Findings
+
+**HIGH severity (must fix — done in PR #35):**
+
+- [x] **H1** — Malformed `.devrail.yml` silently treated as "no plugins declared". `yq ... \|\| echo 0` swallowed parse errors, exit 0 with "no plugins" message. Fixed by both resolver and verifier wrapping yq via a `parse_plugin_count` helper that distinguishes "parse failure" (exit 2 with structured error) from "no plugins entry".
+
+**MEDIUM severity (should fix — done in PR #35):**
+
+- [x] **M1** — Verifier interpolated source URL into yq expression unquoted; malformed/malicious source values could break the query. Fixed by passing via `strenv()` instead.
+- [x] **M2** — Slug collisions (two sources with same `basename`) silently overwrote each other's caches. Fixed by tracking `SLUG_TO_SOURCE` during the resolve loop and emitting `plugin slug collision` error on second occurrence.
+- [x] **M3** — `fetch_to_cache` had a race window between `rm -rf target` and `mv fetch_dir target`; concurrent `make check` could see absent path. Fixed via atomic swap (move existing aside, install new, remove old) with rollback.
+- [x] **M4** — `compute_content_hash` duplicated between resolver and verifier; future drift risk. Extracted to new `lib/plugin-cache.sh` along with `derive_slug` helper.
+- [x] **M5** — Resolver didn't validate fetched manifest, leading to "make plugins-update succeeds, every make check fails". Fixed by invoking `plugin-validator.sh` on the fetched manifest before recording content_hash.
+
+**LOW severity (nice to fix — done in PR #35):**
+
+- [x] **L1** — `fetch_to_cache` comment said 3 args, takes 4. Comment updated.
+- [x] **L2** — `.git`-suffixed URLs yielded ugly slugs. `derive_slug` now strips the suffix.
+- [x] **L3** — Source URLs with colons could break YAML parsing if format evolved. Lockfile entries now double-quoted via `yaml_quote` helper.
+- [x] **L4** — No test for `_plugins-update` no-op with no plugins. Added Case 15.
+- [x] **L5** — Idempotent-fetch test asserted event presence, not absence of re-clone. Added Case 16 that checks `.devrail.sha` mtime stability.
+- [x] **L6** — No test for `.git`-suffixed source URL. Added Case 14.
+
+### Action Items
+
+All 12 action items resolved in PR #35 (`fix/13-3-review-followups`).
+
+- [x] [AI-Review][HIGH] H1: distinguish yq parse failure from no-plugins [scripts/plugin-resolver.sh, plugin-lockfile-verify.sh → fixed]
+- [x] [AI-Review][MED] M1: yq query injection in verifier [scripts/plugin-lockfile-verify.sh → fixed via strenv]
+- [x] [AI-Review][MED] M2: slug collision detection [scripts/plugin-resolver.sh → fixed]
+- [x] [AI-Review][MED] M3: atomic cache swap [scripts/plugin-resolver.sh → fixed]
+- [x] [AI-Review][MED] M4: extract compute_content_hash to lib [lib/plugin-cache.sh → fixed]
+- [x] [AI-Review][MED] M5: validate manifest in resolver [scripts/plugin-resolver.sh → fixed]
+- [x] [AI-Review][LOW] L1: fetch_to_cache comment arity [scripts/plugin-resolver.sh → fixed]
+- [x] [AI-Review][LOW] L2: strip .git suffix in derive_slug [lib/plugin-cache.sh → fixed]
+- [x] [AI-Review][LOW] L3: quote lockfile values [scripts/plugin-resolver.sh → fixed]
+- [x] [AI-Review][LOW] L4: test _plugins-update no-op [tests/test-plugin-resolver.sh → fixed]
+- [x] [AI-Review][LOW] L5: assert mtime stability [tests/test-plugin-resolver.sh → fixed]
+- [x] [AI-Review][LOW] L6: test .git-suffixed URL [tests/test-plugin-resolver.sh → fixed]
