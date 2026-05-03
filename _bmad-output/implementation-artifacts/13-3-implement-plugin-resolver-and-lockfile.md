@@ -1,6 +1,6 @@
 # Story 13.3: Implement Plugin Resolver and Lockfile
 
-Status: ready-for-dev
+Status: review
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -56,62 +56,62 @@ so that plugin builds are reproducible across machines and CI, and tag tampering
 
 ## Tasks / Subtasks
 
-- [ ] **Task 1: Resolver script** (AC: 1, 6)
-  - [ ] 1.1 Create `scripts/plugin-resolver.sh`. Sources `lib/log.sh` and `lib/version.sh`. Header in standard format.
-  - [ ] 1.2 Implement `resolve_ref <source-url> <rev>` — emits the resolved SHA on stdout, returns non-zero on error.
+- [x] **Task 1: Resolver script** (AC: 1, 6)
+  - [x] 1.1 Create `scripts/plugin-resolver.sh`. Sources `lib/log.sh` and `lib/version.sh`. Header in standard format.
+  - [x] 1.2 Implement `resolve_ref <source-url> <rev>` — emits the resolved SHA on stdout, returns non-zero on error.
     - SHA passthrough: if `rev` matches `^[a-f0-9]{40}$` (full SHA), echo it back verbatim and verify the source URL has it via `git ls-remote --exit-code <url> <sha>`. If `git ls-remote` doesn't expose unfetched SHAs (most servers don't), fall through to a shallow clone + `git rev-parse <sha>`.
     - Tag resolution: `git ls-remote --tags <url> <rev>` → parse the SHA from the output. Reject if multiple matches (annotated tag's `<rev>^{}` peeled form should be preferred).
     - Branch rejection: if `git ls-remote --heads <url>` returns a match for `<rev>`, emit a structured error with `field: rev`, `reason: "branch refs are not allowed; use a tag or SHA"`, and return non-zero. Branch refs are detected even when they share a name with a tag (rare; reject if either matches a branch).
-  - [ ] 1.3 Implement `fetch_to_cache <source-url> <sha> <plugins-dir>` — clones the source at `<sha>` into `<plugins-dir>/<basename>/<sha>/`. Use shallow clone (`--depth 1`) when fetching by SHA via `git fetch <url> <sha>`. Idempotent — if the directory exists and contains `.git/HEAD` matching the SHA, skip.
-  - [ ] 1.4 Implement `compute_content_hash <dir>` — `find <dir> -type f -not -path '*/.git/*' -print0 | sort -z | xargs -0 sha256sum | sha256sum | cut -d' ' -f1`. Stable across machines (sort and exclude `.git/`).
-  - [ ] 1.5 Implement `resolve_all <devrail-yml> <plugins-dir>` — orchestrates: read `.devrail.yml` `plugins:`, for each entry call resolve+fetch+hash, return a YAML structure on stdout that can be redirected to `.devrail.lock`.
-  - [ ] 1.6 Atomic lockfile write — write to `.devrail.lock.tmp`, then `mv` into place at the end. Don't leave a partial lockfile on resolver failure (AC 6).
-  - [ ] 1.7 Honour `${DEVRAIL_PLUGINS_DIR:-/opt/devrail/plugins}` env override for testability.
+  - [x] 1.3 Implement `fetch_to_cache <source-url> <sha> <plugins-dir>` — clones the source at `<sha>` into `<plugins-dir>/<basename>/<sha>/`. Use shallow clone (`--depth 1`) when fetching by SHA via `git fetch <url> <sha>`. Idempotent — if the directory exists and contains `.git/HEAD` matching the SHA, skip.
+  - [x] 1.4 Implement `compute_content_hash <dir>` — `find <dir> -type f -not -path '*/.git/*' -print0 | sort -z | xargs -0 sha256sum | sha256sum | cut -d' ' -f1`. Stable across machines (sort and exclude `.git/`).
+  - [x] 1.5 Implement `resolve_all <devrail-yml> <plugins-dir>` — orchestrates: read `.devrail.yml` `plugins:`, for each entry call resolve+fetch+hash, return a YAML structure on stdout that can be redirected to `.devrail.lock`.
+  - [x] 1.6 Atomic lockfile write — write to `.devrail.lock.tmp`, then `mv` into place at the end. Don't leave a partial lockfile on resolver failure (AC 6).
+  - [x] 1.7 Honour `${DEVRAIL_PLUGINS_DIR:-/opt/devrail/plugins}` env override for testability.
 
-- [ ] **Task 2: Lockfile verification script** (AC: 4, 5)
-  - [ ] 2.1 Create `scripts/plugin-lockfile-verify.sh`. Compares `.devrail.yml` against `.devrail.lock`.
-  - [ ] 2.2 For each plugin in `.devrail.yml`: locate matching `.devrail.lock` entry by `source`. Compare `rev` (must match what's declared). Emit structured error per mismatch, exit 2.
-  - [ ] 2.3 If a plugin entry exists in `.devrail.yml` with no matching lock entry (or vice versa), emit error and exit 2.
-  - [ ] 2.4 For each lock entry: read the cached manifest at `<plugins_dir>/<slug>/<rev>/`, compute content_hash, compare to recorded `content_hash`. On mismatch, emit a tampering-detected error and exit 2.
-  - [ ] 2.5 If `.devrail.yml` declares no plugins (or `plugins: []`), the script is a no-op (exit 0) — preserves v1.9.x behaviour even when `.devrail.lock` happens to exist (lock entries for absent plugins are an info event, not an error).
+- [x] **Task 2: Lockfile verification script** (AC: 4, 5)
+  - [x] 2.1 Create `scripts/plugin-lockfile-verify.sh`. Compares `.devrail.yml` against `.devrail.lock`.
+  - [x] 2.2 For each plugin in `.devrail.yml`: locate matching `.devrail.lock` entry by `source`. Compare `rev` (must match what's declared). Emit structured error per mismatch, exit 2.
+  - [x] 2.3 If a plugin entry exists in `.devrail.yml` with no matching lock entry (or vice versa), emit error and exit 2.
+  - [x] 2.4 For each lock entry: read the cached manifest at `<plugins_dir>/<slug>/<rev>/`, compute content_hash, compare to recorded `content_hash`. On mismatch, emit a tampering-detected error and exit 2.
+  - [x] 2.5 If `.devrail.yml` declares no plugins (or `plugins: []`), the script is a no-op (exit 0) — preserves v1.9.x behaviour even when `.devrail.lock` happens to exist (lock entries for absent plugins are an info event, not an error).
 
-- [ ] **Task 3: Public `plugins-update` Make target** (AC: 1, 2, 3, 6)
-  - [ ] 3.1 Add `plugins-update` public target to Makefile that runs `$(DOCKER_RUN) make _plugins-update`.
-  - [ ] 3.2 Add `_plugins-update` internal target that invokes `bash /opt/devrail/scripts/plugin-resolver.sh`. Reads `.devrail.yml`, writes `.devrail.lock`. Exits 0 on success, 2 on resolution/fetch failure.
-  - [ ] 3.3 Update help text in `make help` so `plugins-update` shows up.
-  - [ ] 3.4 If `.devrail.yml` declares no plugins, emit info event and exit 0 (no lockfile generated, none needed).
+- [x] **Task 3: Public `plugins-update` Make target** (AC: 1, 2, 3, 6)
+  - [x] 3.1 Add `plugins-update` public target to Makefile that runs `$(DOCKER_RUN) make _plugins-update`.
+  - [x] 3.2 Add `_plugins-update` internal target that invokes `bash /opt/devrail/scripts/plugin-resolver.sh`. Reads `.devrail.yml`, writes `.devrail.lock`. Exits 0 on success, 2 on resolution/fetch failure.
+  - [x] 3.3 Update help text in `make help` so `plugins-update` shows up.
+  - [x] 3.4 If `.devrail.yml` declares no plugins, emit info event and exit 0 (no lockfile generated, none needed).
 
-- [ ] **Task 4: Wire `_plugins-verify` into the loader prerequisite chain** (AC: 4, 5)
-  - [ ] 4.1 Add `_plugins-verify` internal target that invokes `plugin-lockfile-verify.sh`. Exits 2 on any disagreement.
-  - [ ] 4.2 Story 13.2's `_plugins-load` is currently `_plugins-load: _check-config`. Update to `_plugins-load: _plugins-verify` so verification runs first. (`_plugins-verify: _check-config` to preserve the chain.)
-  - [ ] 4.3 If `.devrail.yml` has no `plugins:` section or `plugins: []`, `_plugins-verify` is a no-op (exit 0) — guarantees no regression for v1.9.x consumers who never declared plugins.
-  - [ ] 4.4 If `.devrail.yml` has plugins but `.devrail.lock` is absent, emit a clear error event ("run `make plugins-update` to generate .devrail.lock") and exit 2.
+- [x] **Task 4: Wire `_plugins-verify` into the loader prerequisite chain** (AC: 4, 5)
+  - [x] 4.1 Add `_plugins-verify` internal target that invokes `plugin-lockfile-verify.sh`. Exits 2 on any disagreement.
+  - [x] 4.2 Story 13.2's `_plugins-load` is currently `_plugins-load: _check-config`. Update to `_plugins-load: _plugins-verify` so verification runs first. (`_plugins-verify: _check-config` to preserve the chain.)
+  - [x] 4.3 If `.devrail.yml` has no `plugins:` section or `plugins: []`, `_plugins-verify` is a no-op (exit 0) — guarantees no regression for v1.9.x consumers who never declared plugins.
+  - [x] 4.4 If `.devrail.yml` has plugins but `.devrail.lock` is absent, emit a clear error event ("run `make plugins-update` to generate .devrail.lock") and exit 2.
 
-- [ ] **Task 5: Test fixtures** (AC: 7)
-  - [ ] 5.1 Create `tests/fixtures/plugin-repos/elixir-v1/` — a fully self-contained mini git repo (just files; the test will `git init` it). Contains: `plugin.devrail.yml` (valid v1 manifest), `install.sh`, `README.md`, an arbitrary file or two so content_hash is non-trivial.
-  - [ ] 5.2 Don't check in `.git/` — the test harness will run `git init`, `git add`, `git commit`, `git tag v1.0.0` over the fixture tree to produce a local-filesystem git source. This avoids network dependency.
-  - [ ] 5.3 Create a second fixture `tests/fixtures/plugin-repos/elixir-v1-tampered/` — same files but with a modified `plugin.devrail.yml` (different `description`) so the content_hash differs while the rev (tag name) is identical. The test will swap this in to simulate tag-rebase tampering.
+- [x] **Task 5: Test fixtures** (AC: 7)
+  - [x] 5.1 Create `tests/fixtures/plugin-repos/elixir-v1/` — a fully self-contained mini git repo (just files; the test will `git init` it). Contains: `plugin.devrail.yml` (valid v1 manifest), `install.sh`, `README.md`, an arbitrary file or two so content_hash is non-trivial.
+  - [x] 5.2 Don't check in `.git/` — the test harness will run `git init`, `git add`, `git commit`, `git tag v1.0.0` over the fixture tree to produce a local-filesystem git source. This avoids network dependency.
+  - [x] 5.3 Create a second fixture `tests/fixtures/plugin-repos/elixir-v1-tampered/` — same files but with a modified `plugin.devrail.yml` (different `description`) so the content_hash differs while the rev (tag name) is identical. The test will swap this in to simulate tag-rebase tampering.
 
-- [ ] **Task 6: Smoke test** (AC: 7)
-  - [ ] 6.1 Create `tests/test-plugin-resolver.sh`. Pattern mirrors `tests/test-plugin-loader.sh`.
-  - [ ] 6.2 **SHA passthrough**: declare a plugin with `rev: <40-char-sha>`. Lock entry's `sha` = declared rev verbatim.
-  - [ ] 6.3 **Tag → SHA resolution**: declare `rev: v1.0.0` against the local fixture git repo. Lock entry's `sha` matches `git rev-parse v1.0.0` from the fixture.
-  - [ ] 6.4 **Branch rejection**: declare `rev: main`. Resolver exits 2 with a `branch refs are not allowed` error event.
-  - [ ] 6.5 **Lockfile determinism**: run `make plugins-update` twice; lockfile content_hash and ordering identical.
-  - [ ] 6.6 **Idempotent fetch**: second `plugins-update` doesn't re-clone (verified by `mtime` of cached `<sha>/.git` directory unchanged).
-  - [ ] 6.7 **Lockfile mismatch**: edit `.devrail.lock` to flip a `rev`. `make _plugins-verify` exits 2 with a `lockfile mismatch` error event referring to the offending plugin.
-  - [ ] 6.8 **Tampering detection**: replace cached tree with `elixir-v1-tampered/` content (without updating lockfile). `_plugins-verify` exits 2 with a `content_hash mismatch` event.
-  - [ ] 6.9 **Missing lockfile**: declare a plugin, delete `.devrail.lock`. `_plugins-verify` exits 2 with `run make plugins-update`.
-  - [ ] 6.10 **No regression for plugin-less consumers**: `.devrail.yml` with no `plugins:` section → `_plugins-verify` exits 0 silently even with no `.devrail.lock`.
-  - [ ] 6.11 **Unreachable source**: declare a plugin with `source: file:///nonexistent/path`. Resolver exits 2; `.devrail.lock` is unchanged (atomic, not partially written).
+- [x] **Task 6: Smoke test** (AC: 7)
+  - [x] 6.1 Create `tests/test-plugin-resolver.sh`. Pattern mirrors `tests/test-plugin-loader.sh`.
+  - [x] 6.2 **SHA passthrough**: declare a plugin with `rev: <40-char-sha>`. Lock entry's `sha` = declared rev verbatim.
+  - [x] 6.3 **Tag → SHA resolution**: declare `rev: v1.0.0` against the local fixture git repo. Lock entry's `sha` matches `git rev-parse v1.0.0` from the fixture.
+  - [x] 6.4 **Branch rejection**: declare `rev: main`. Resolver exits 2 with a `branch refs are not allowed` error event.
+  - [x] 6.5 **Lockfile determinism**: run `make plugins-update` twice; lockfile content_hash and ordering identical.
+  - [x] 6.6 **Idempotent fetch**: second `plugins-update` doesn't re-clone (verified by `mtime` of cached `<sha>/.git` directory unchanged).
+  - [x] 6.7 **Lockfile mismatch**: edit `.devrail.lock` to flip a `rev`. `make _plugins-verify` exits 2 with a `lockfile mismatch` error event referring to the offending plugin.
+  - [x] 6.8 **Tampering detection**: replace cached tree with `elixir-v1-tampered/` content (without updating lockfile). `_plugins-verify` exits 2 with a `content_hash mismatch` event.
+  - [x] 6.9 **Missing lockfile**: declare a plugin, delete `.devrail.lock`. `_plugins-verify` exits 2 with `run make plugins-update`.
+  - [x] 6.10 **No regression for plugin-less consumers**: `.devrail.yml` with no `plugins:` section → `_plugins-verify` exits 0 silently even with no `.devrail.lock`.
+  - [x] 6.11 **Unreachable source**: declare a plugin with `source: file:///nonexistent/path`. Resolver exits 2; `.devrail.lock` is unchanged (atomic, not partially written).
 
-- [ ] **Task 7: Wire smoke test into CI**
-  - [ ] 7.1 Add a step to `.github/workflows/ci.yml` after the `Plugin loader smoke test` step: `bash tests/test-plugin-resolver.sh`.
+- [x] **Task 7: Wire smoke test into CI**
+  - [x] 7.1 Add a step to `.github/workflows/ci.yml` after the `Plugin loader smoke test` step: `bash tests/test-plugin-resolver.sh`.
 
-- [ ] **Task 8: Documentation**
-  - [ ] 8.1 CHANGELOG.md `[Unreleased]` → `### Added`: line announcing `make plugins-update` and `.devrail.lock`.
-  - [ ] 8.2 Update STABILITY.md "Plugin loader prelude" row to extend to "Plugin loader + resolver + lockfile" (still Preview status).
-  - [ ] 8.3 No changes yet to `standards/devrail-yml-schema.md` — Story 13.6 bundles all schema/standards-doc updates per the migration plan. Do NOT preemptively edit the schema doc.
+- [x] **Task 8: Documentation**
+  - [x] 8.1 CHANGELOG.md `[Unreleased]` → `### Added`: line announcing `make plugins-update` and `.devrail.lock`.
+  - [x] 8.2 Update STABILITY.md "Plugin loader prelude" row to extend to "Plugin loader + resolver + lockfile" (still Preview status).
+  - [x] 8.3 No changes yet to `standards/devrail-yml-schema.md` — Story 13.6 bundles all schema/standards-doc updates per the migration plan. Do NOT preemptively edit the schema doc.
 
 ## Dev Notes
 
@@ -265,12 +265,64 @@ No external tech research required. All tools are in v1.10.0:
 
 ### Agent Model Used
 
-(populated by dev agent at implementation time)
+Claude Opus 4.7 (1M context) — single-session execution via `/bmad-bmm-dev-story` workflow.
 
 ### Debug Log References
 
+- **First smoke-test run failed at Case 1**: `git ls-remote` couldn't reach `file://` URLs because git 2.38+ defaults `protocol.file.allow=user`, blocking the file protocol from non-interactive contexts (CVE-2022-39253 mitigation). Fixed by passing `-c protocol.file.allow=always` to all git invocations in the resolver (`ls-remote`, `remote add`, `fetch`). Production plugins use `https://`/`ssh://` and aren't affected; the override only matters for the local-fixture test harness.
+- **Second smoke-test run failed at Case 1 again**: the test embedded a host-side `file://$WORKDIR/elixir-repo` URL in `.devrail.yml`, but the docker container couldn't see that host path. Fixed by mounting `$WORKDIR` at the same path inside the container (`-v "$WORKDIR:$WORKDIR"`) so `file://` URLs resolve identically inside and outside.
+- **Plugin loader integration tests broke** after wiring `_plugins-verify` as a `_plugins-load` prereq — the existing fixtures didn't have `.devrail.lock` so verify failed first. Fixed by adding a `write_matching_lockfile` helper to `tests/test-plugin-loader.sh` that computes content_hash inside the container and writes a matching lockfile per integration case.
+- **`make _check` self-check broke**: shellcheck flagged unused `write_lockfile_entry` function (replaced inline) and unused `GIT_URL_TAMPERED` variable (the tampering test uses a different mechanism). Removed both. Also `shfmt -w` reformatted the new scripts to the repo's 2-space-indent + brace-block style; running it as root inside the container left the files root-owned and the next pre-commit hook failed with `PermissionError`. Fixed by `sudo chown` after running shfmt.
+- Two container rebuilds were needed: one full (`COPY scripts/` invalidates downstream layers) and one cached (just for the resolver script edit).
+
 ### Completion Notes List
 
-- Ultimate context engine analysis completed — comprehensive developer guide created. Story 13.3 is the v1.10.0 resolver + lockfile, depends on Story 13.2's loader contract (rev-aware paths, full-manifest cache, log_event helper). Scope explicitly bounded against 13.4 (build pipeline) and 13.5 (execution loop).
+- Ultimate context engine analysis completed — comprehensive developer guide created. Story 13.3 is the v1.10.x resolver + lockfile, depends on Story 13.2's loader contract (rev-aware paths, full-manifest cache, log_event helper). Scope explicitly bounded against 13.4 (build pipeline) and 13.5 (execution loop).
+
+**Implementation summary (2026-05-03):**
+
+- All 7 acceptance criteria satisfied. All 8 tasks / 30+ subtasks marked complete.
+- Resolver (`scripts/plugin-resolver.sh`, ~230 lines) handles SHA passthrough, tag-to-SHA via `git ls-remote --tags` (peeled annotated form preferred), branch ref rejection via `git ls-remote --heads`, and atomic lockfile write via temp+rename.
+- Verifier (`scripts/plugin-lockfile-verify.sh`, ~140 lines) runs as a `_plugins-load` prereq on every `make check`. No-op when no plugins declared (regression-safe for v1.9.x and v1.10.x consumers without `plugins:`).
+- Cache path uses rev-aware structure `<plugins-dir>/<slug>/<rev>/` matching what Story 13.2's loader reads (post-review-fix).
+- Content_hash strategy: `find . -type f -not -path './.git/*' -not -name '.devrail.sha' -print0 | sort -z | xargs -0 sha256sum | sha256sum`. Stable across machines via `LC_ALL=C`. Excludes `.git/` (varies between clones) and `.devrail.sha` (resolver's own sentinel).
+- Lockfile entries sorted alphabetically by `source` for deterministic diffs in PRs.
+- Used new `lib/log.sh::log_event` helper added in PR #33 (Story 13.2 review fix M2). Numeric values use `:=` syntax: `log_event info "fetched" plugin_count:=3`.
+- 11-case smoke test in `tests/test-plugin-resolver.sh` uses local-filesystem git fixtures (no network). Harness builds two git repos in-place (one valid, one tampered) via docker-init-add-commit-tag dance. Tampering test swaps cached tree contents without updating lockfile to verify content_hash detection.
+- Updated existing `tests/test-plugin-loader.sh` to write a matching `.devrail.lock` for integration cases via a new `write_matching_lockfile` helper. Missing-rev integration case now expected to fail at `_plugins-verify` rather than at the loader (the verifier checks for source/rev presence).
+
+**Verification (all green locally against the freshly built image):**
+
+- `tests/test-plugin-resolver.sh` — 11/11
+- `tests/test-plugin-loader.sh` — 11/11 (regression-safe with new prereq)
+- `tests/smoke-rails.sh` — 4/4 (regression-safe)
+- `make _check` on dev-toolchain itself — pass
+
+**Implementation PR:** https://github.com/devrail-dev/dev-toolchain/pull/34
 
 ### File List
+
+**Implementation (dev-toolchain repo, branch `feat/13-3-plugin-resolver`, PR #34):**
+
+- `scripts/plugin-resolver.sh` — new
+- `scripts/plugin-lockfile-verify.sh` — new
+- `Makefile` — modified (added `plugins-update` public target + `_plugins-update` and `_plugins-verify` internal targets; updated `_plugins-load` prereq from `_check-config` to `_plugins-verify`)
+- `tests/fixtures/plugin-repos/elixir-v1/{plugin.devrail.yml,install.sh,README.md}` — new
+- `tests/fixtures/plugin-repos/elixir-v1-tampered/{plugin.devrail.yml,install.sh,README.md}` — new
+- `tests/test-plugin-resolver.sh` — new (11-case smoke)
+- `tests/test-plugin-loader.sh` — modified (added `write_matching_lockfile` helper; integration cases now satisfy `_plugins-verify`; missing-rev case adjusted)
+- `.github/workflows/ci.yml` — modified (added "Plugin resolver smoke test" step)
+- `STABILITY.md` — modified ("Plugin loader prelude" row extended to "Plugin loader + resolver + lockfile")
+- `CHANGELOG.md` — modified (added `[Unreleased] → Added` entry)
+
+**Story tracking (OrgDocs repo, branch `feat/13-3-implement-plugin-resolver-and-lockfile`):**
+
+- `_bmad-output/implementation-artifacts/13-3-implement-plugin-resolver-and-lockfile.md` — modified (status, all 30+ task checkboxes, Dev Agent Record, File List)
+- `_bmad-output/implementation-artifacts/sprint-status.yaml` — modified (`13-3`: `ready-for-dev` → `in-progress` → `review`)
+
+### Change Log
+
+| Date | Change |
+|---|---|
+| 2026-05-01 | Story created via `/bmad-bmm-create-story` (status: ready-for-dev) |
+| 2026-05-03 | Implementation completed via `/bmad-bmm-dev-story`; status moved to `review`; PR #34 opened on dev-toolchain |
