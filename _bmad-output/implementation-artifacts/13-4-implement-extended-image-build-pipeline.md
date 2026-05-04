@@ -374,7 +374,7 @@ The review covered both halves of Story 13.4:
 - [x] **L7** — Smoke tests had no multi-plugin case to exercise the for-loop over plugin entries. Added Case 10 (two-plugin smoke).
 - [x] **L8** — Cache-hit Case 6 ceiling was 30s — too generous given the 1s AC inside the orchestrator. Tightened to 10s end-to-end (leaves headroom for slow CI).
 - [x] **L9** — Build-failure Case 8 didn't assert that the tag file is NOT written. Added the assertion so DOCKER_RUN can't reference a phantom tag after a failed build.
-- [x] **L10** — No test for the plugins → no-plugins transition (stale tag file cleanup). Added Case 9.
+- [x] **L10** — No test for the plugins → no-plugins transition (stale tag file cleanup). Added Case 9 — which caught a real product bug: the `if [ -n "$(HAS_PLUGINS_DECLARED)" ]` gate in `_extended-image` skipped the orchestrator entirely when plugins were removed, so the orchestrator's tag-file cleanup never ran. Follow-up commit added Makefile-level `rm -f .devrail/extended-image-tag` in the elif arm and gated `_devrail-host-bin` on HAS_PLUGINS_DECLARED.
 - [x] **L11** — All full-pipeline cases bypassed `make plugins-update` and hand-crafted the lockfile. Added Case 11 — full resolver → loader → build path against a file:// fixture.
 
 ### Action Items
