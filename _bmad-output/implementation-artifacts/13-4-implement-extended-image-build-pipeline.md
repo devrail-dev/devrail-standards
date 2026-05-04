@@ -332,3 +332,68 @@ Claude Opus 4.7 (1M context) — split into two PRs in a single session at user 
 | 2026-05-03 | Story created via `/bmad-bmm-create-story` (status: ready-for-dev) |
 | 2026-05-03 | Story 13.4a (foundation) implemented and merged via PR #36 |
 | 2026-05-04 | Story 13.4b (full pipeline) implemented; PR #37 opened; status moved to `review` |
+| 2026-05-04 | Senior-developer review completed via `/bmad-bmm-code-review`; 16 findings (2 HIGH, 3 MED, 11 LOW); all addressed via additional commit on PR #37 (`feat/13-4b-build-pipeline`) |
+
+## Senior Developer Review (AI)
+
+**Reviewer:** Matthew (review executed by Opus 4.7 — same model that implemented the story; see caveat)
+**Date:** 2026-05-04
+**Outcome:** Approve (after follow-up commit on PR #37)
+
+### Caveat
+
+Same model that wrote the implementation also performed the review. Findings skew toward checklist-sweep rather than independent insight. A future review under a different model is welcome and may surface additional issues.
+
+### Scope
+
+The review covered both halves of Story 13.4:
+- 13.4a (PR #36, already merged) — Dockerfile.devrail generator and host cache mount
+- 13.4b (PR #37, in flight) — host orchestrator script, extended-image build pipeline, and integration tests
+
+### Findings
+
+**HIGH severity (must fix — done in PR #37 follow-up commit):**
+
+- [x] **H1** — `Makefile:HAS_PLUGINS_DECLARED` used `yq -r '.plugins // [] | length' ... 2>/dev/null | awk` — yq parse errors were silently swallowed, causing a malformed `.devrail.yml` to fall through as "no plugins declared" and skip the extended-image build entirely. Fixed by introducing a `DEVRAIL_PLUGIN_PROBE` variable that distinguishes missing/parse-error/valid+count and uses `$(error ...)` to fail Make loudly on parse failure.
+- [x] **H2** — `scripts/plugin-extended-image.sh` is a HOST script and lives only in the dev-toolchain repo. Consumer template repos (`github-repo-template`, `gitlab-repo-template`) inherit the Makefile but NOT `scripts/`, so the orchestrator was undistributable. Fixed by adding a `_devrail-host-bin` Makefile target that extracts the orchestrator + lib from the resolved core image to `.devrail/host-bin/`, cached and invalidated by image tag. The dev-toolchain repo itself uses the on-disk copy when present.
+
+**MEDIUM severity (should fix — done in PR #37 follow-up commit):**
+
+- [x] **M1** — Concurrent `make check` invocations on the same workspace race on `STAGING_DIR` creation/cleanup and on `Dockerfile.devrail`. Fixed by acquiring an `flock -w 300` on `.devrail/.build.lock` before staging.
+- [x] **M2** — `scripts/plugin-extended-image.sh` duplicated `derive_slug` logic (basename + `.git` strip) from `lib/plugin-cache.sh`. Fixed by sourcing `lib/plugin-cache.sh` and using the shared helper.
+- [x] **M3** — When the host plugin cache was empty, the error message said "plugin manifest not found in host cache" but didn't tell users to run `make plugins-update`. Fixed by adding a `hint=make plugins-update` field to the structured event.
+
+**LOW severity (nice to fix — done in PR #37 follow-up commit):**
+
+- [x] **L1** — Host-side requirements for the build pipeline (yq v4+, sha256sum, flock, docker buildx) weren't documented. Added a Consumer Responsibilities entry in STABILITY.md.
+- [x] **L2** — Orchestrator hardcoded `WORKSPACE="$(pwd)"`. Made it overridable via `DEVRAIL_WORKSPACE` for testability.
+- [x] **L3** — `BUILD_LOG` temp file was rm'd on the success path but could leak on unusual exit paths. Moved cleanup into the EXIT trap alongside `STAGING_DIR`.
+- [x] **L4** — Orchestrator forwarded `DEVRAIL_VERSION` and `DEVRAIL_LOG_FORMAT` to the in-container generator but not `DEVRAIL_QUIET` / `DEVRAIL_DEBUG`. Forwarded all four for consistent log behaviour.
+- [x] **L5** — Script set `DOCKER_BUILDKIT=1` but didn't precondition-check buildx availability. Added explicit `docker buildx version` check with a clear error.
+- [x] **L6** — Same-workspace concurrent build dedup — covered by M1 fix (flock).
+- [x] **L7** — Smoke tests had no multi-plugin case to exercise the for-loop over plugin entries. Added Case 10 (two-plugin smoke).
+- [x] **L8** — Cache-hit Case 6 ceiling was 30s — too generous given the 1s AC inside the orchestrator. Tightened to 10s end-to-end (leaves headroom for slow CI).
+- [x] **L9** — Build-failure Case 8 didn't assert that the tag file is NOT written. Added the assertion so DOCKER_RUN can't reference a phantom tag after a failed build.
+- [x] **L10** — No test for the plugins → no-plugins transition (stale tag file cleanup). Added Case 9.
+- [x] **L11** — All full-pipeline cases bypassed `make plugins-update` and hand-crafted the lockfile. Added Case 11 — full resolver → loader → build path against a file:// fixture.
+
+### Action Items
+
+All 16 action items resolved in the follow-up commit on PR #37 (`feat/13-4b-build-pipeline`).
+
+- [x] [AI-Review][HIGH] H1: probe `.devrail.yml` parse vs no-plugins [Makefile → fixed]
+- [x] [AI-Review][HIGH] H2: extract host orchestrator from container for consumers [Makefile (`_devrail-host-bin`) → fixed]
+- [x] [AI-Review][MED] M1: flock per-workspace `.devrail/.build.lock` [scripts/plugin-extended-image.sh → fixed]
+- [x] [AI-Review][MED] M2: source `lib/plugin-cache.sh`, use shared `derive_slug` [scripts/plugin-extended-image.sh → fixed]
+- [x] [AI-Review][MED] M3: surface `make plugins-update` hint on empty host cache [scripts/plugin-extended-image.sh → fixed]
+- [x] [AI-Review][LOW] L1: document host requirements in STABILITY.md [STABILITY.md → fixed]
+- [x] [AI-Review][LOW] L2: WORKSPACE override via `DEVRAIL_WORKSPACE` [scripts/plugin-extended-image.sh → fixed]
+- [x] [AI-Review][LOW] L3: BUILD_LOG cleanup in EXIT trap [scripts/plugin-extended-image.sh → fixed]
+- [x] [AI-Review][LOW] L4: forward DEVRAIL_QUIET / DEVRAIL_DEBUG to generator [scripts/plugin-extended-image.sh → fixed]
+- [x] [AI-Review][LOW] L5: explicit `docker buildx version` precondition [scripts/plugin-extended-image.sh → fixed]
+- [x] [AI-Review][LOW] L6: same-workspace concurrent build dedup [scripts/plugin-extended-image.sh → fixed via M1 flock]
+- [x] [AI-Review][LOW] L7: two-plugin smoke case [tests/test-plugin-build-pipeline.sh Case 10 → fixed]
+- [x] [AI-Review][LOW] L8: tighten Case 6 cache-hit ceiling to 10s [tests/test-plugin-build-pipeline.sh → fixed]
+- [x] [AI-Review][LOW] L9: assert no tag file on build failure [tests/test-plugin-build-pipeline.sh Case 8 → fixed]
+- [x] [AI-Review][LOW] L10: plugins → no-plugins transition test [tests/test-plugin-build-pipeline.sh Case 9 → fixed]
+- [x] [AI-Review][LOW] L11: end-to-end resolver → loader → build path test [tests/test-plugin-build-pipeline.sh Case 11 → fixed]
