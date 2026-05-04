@@ -354,7 +354,7 @@ The review covered both halves of Story 13.4:
 
 **HIGH severity (must fix — done in PR #37 follow-up commit):**
 
-- [x] **H1** — `Makefile:HAS_PLUGINS_DECLARED` used `yq -r '.plugins // [] | length' ... 2>/dev/null | awk` — yq parse errors were silently swallowed, causing a malformed `.devrail.yml` to fall through as "no plugins declared" and skip the extended-image build entirely. Fixed by introducing a `DEVRAIL_PLUGIN_PROBE` variable that distinguishes missing/parse-error/valid+count and uses `$(error ...)` to fail Make loudly on parse failure.
+- [x] **H1** — `Makefile:HAS_PLUGINS_DECLARED` used `yq -r '.plugins // [] | length' ... 2>/dev/null | awk` — yq parse errors were silently swallowed, causing a malformed `.devrail.yml` to fall through as "no plugins declared" and skip the extended-image build entirely. Fixed by introducing a `DEVRAIL_PLUGIN_PROBE` variable that distinguishes missing/parse-error/valid+count, with the "error" case caught explicitly inside `_extended-image` (emits the same `config could not be parsed by yq` event format used by the resolver). Initial fix used `$(error ...)` at Make parse time but regressed Story 13.3's resolver-Case-12 (which expects the resolver script to surface the parse-error event); follow-up commit deferred the error from Make parse time to `_extended-image` runtime so other targets remain runnable.
 - [x] **H2** — `scripts/plugin-extended-image.sh` is a HOST script and lives only in the dev-toolchain repo. Consumer template repos (`github-repo-template`, `gitlab-repo-template`) inherit the Makefile but NOT `scripts/`, so the orchestrator was undistributable. Fixed by adding a `_devrail-host-bin` Makefile target that extracts the orchestrator + lib from the resolved core image to `.devrail/host-bin/`, cached and invalidated by image tag. The dev-toolchain repo itself uses the on-disk copy when present.
 
 **MEDIUM severity (should fix — done in PR #37 follow-up commit):**
@@ -374,7 +374,7 @@ The review covered both halves of Story 13.4:
 - [x] **L7** — Smoke tests had no multi-plugin case to exercise the for-loop over plugin entries. Added Case 10 (two-plugin smoke).
 - [x] **L8** — Cache-hit Case 6 ceiling was 30s — too generous given the 1s AC inside the orchestrator. Tightened to 10s end-to-end (leaves headroom for slow CI).
 - [x] **L9** — Build-failure Case 8 didn't assert that the tag file is NOT written. Added the assertion so DOCKER_RUN can't reference a phantom tag after a failed build.
-- [x] **L10** — No test for the plugins → no-plugins transition (stale tag file cleanup). Added Case 9.
+- [x] **L10** — No test for the plugins → no-plugins transition (stale tag file cleanup). Added Case 9 — which caught a real product bug: the `if [ -n "$(HAS_PLUGINS_DECLARED)" ]` gate in `_extended-image` skipped the orchestrator entirely when plugins were removed, so the orchestrator's tag-file cleanup never ran. Follow-up commit added Makefile-level `rm -f .devrail/extended-image-tag` in the elif arm and gated `_devrail-host-bin` on HAS_PLUGINS_DECLARED.
 - [x] **L11** — All full-pipeline cases bypassed `make plugins-update` and hand-crafted the lockfile. Added Case 11 — full resolver → loader → build path against a file:// fixture.
 
 ### Action Items
