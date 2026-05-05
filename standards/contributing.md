@@ -498,3 +498,167 @@ Before submitting your pull requests, verify every item:
 - [ ] `devrail.dev` has a page at `content/docs/standards/<language>.md`
 - [ ] All commits use conventional commit format (`type(scope): description`)
 - [ ] All PRs pass CI (`make check`)
+
+## Contributing a Plugin
+
+DevRail plugins extend the dev-toolchain image with new languages or tool integrations without forking the core repos. The plugin loader (shipped in v1.10.x) reads `plugins:` from a consumer's `.devrail.yml`, resolves each entry to an immutable git ref, builds a project-local extended image (`devrail-local:<hash>`), and dispatches plugin-defined targets inside the existing `_lint` / `_format` / `_fix` / `_test` / `_security` recipes.
+
+If you have a tool you want every DevRail-managed project to use, you can ship it as a plugin instead of opening a PR against the core dev-toolchain. This section walks through the contributor surface.
+
+> **See also:** [Plugin architecture design doc](https://github.com/devrail-dev/dev-toolchain/blob/main/docs/plugin-architecture.md) for the full rationale and lifecycle. [`devrail-yml-schema.md` § `plugins:`](devrail-yml-schema.md#plugins) for the consumer-side declaration shape.
+
+### Plugin layout
+
+A plugin is a git repository containing a `plugin.devrail.yml` manifest at the repo root. By convention the repo is named `devrail-plugin-<name>` (the trailing `name` is not enforced — the manifest's `name` field is authoritative — but encouraged for discoverability):
+
+```
+devrail-plugin-elixir/
+├── plugin.devrail.yml      # the manifest (required)
+├── install.sh              # tool install script (referenced by container.install_script)
+├── README.md               # description, supported versions, how to declare
+└── LICENSE
+```
+
+### Manifest (`plugin.devrail.yml`)
+
+```yaml
+schema_version: 1
+name: elixir
+version: 1.0.0
+description: Elixir / Erlang language ecosystem for DevRail
+devrail_min_version: 1.10.0
+
+container:
+  base_image: elixir:1.17-slim       # used when this plugin is built as the runtime
+  install_script: install.sh          # path inside the plugin repo
+  apt_packages:                       # appended to runtime apt layer
+    - inotify-tools
+  copy_from_builder:                  # paths to COPY from the builder stage
+    - /usr/local/bin/elixir
+    - /usr/local/bin/mix
+    - /usr/local/lib/elixir
+  env:
+    MIX_ENV: prod
+
+targets:
+  lint:
+    cmd: "mix credo --strict {paths}"
+    paths_var: ELIXIR_PATHS
+    paths_default: "lib test"
+  format_check:
+    cmd: "mix format --check-formatted"
+  format_fix:
+    cmd: "mix format"
+  test:
+    cmd: "mix test"
+  security:
+    cmd: "mix deps.audit"
+
+gates:
+  lint: ["mix.exs"]
+  format_check: ["mix.exs"]
+  format_fix: ["mix.exs"]
+  test: ["mix.exs", "test/"]
+  security: ["mix.lock"]
+```
+
+Field-by-field:
+
+- **`schema_version`** (int, required) — pinned at `1` for the v1.10.x line. The loader rejects manifests with an unknown major schema. A future schema bump will be major (`2`) and the loader will keep `schema_version: 1` valid for at least one major after that.
+- **`name`** (string, required) — must match `^[a-z][a-z0-9_-]*$`. Becomes the language identifier consumers use in `.devrail.yml` `languages:` and as the override key (e.g., `elixir: { linter: dialyxir }`).
+- **`version`** (semver string, required) — your plugin's own version. Consumers pin via `rev:`; this field is informational.
+- **`devrail_min_version`** (semver string, required) — the oldest dev-toolchain version this plugin supports. The loader compares against the running container's version label and refuses load on mismatch. Use `1.10.0` for plugins that target the first stable plugin-loader release.
+- **`container`** (mapping, required for v1) — see "Container integration" below.
+- **`targets`** (mapping, required) — at least one of `lint`, `format_check`, `format_fix`, `fix`, `test`, `security`. Each target's `cmd` runs inside the project-local extended image. `{paths}` interpolates `${<paths_var>}` (filtered to existing paths); without `paths_var`, `{paths}` is a config error.
+- **`gates`** (mapping, optional) — per-target list of paths that must all exist for the target to run. Workspace-relative only; absolute paths rejected. Empty list or missing key = always run.
+
+### Container integration
+
+Plugins extend the dev-toolchain image via Docker BuildKit. At `make check` time, the consumer's host runs the orchestrator, generates a `Dockerfile.devrail` from the plugin loader cache, and builds `devrail-local:<hash>`:
+
+```dockerfile
+FROM ghcr.io/devrail-dev/dev-toolchain:v1.10.6 AS runtime
+
+# --- plugin: elixir@v1.0.0 ---
+RUN apt-get update && apt-get install -y --no-install-recommends \
+      inotify-tools \
+    && rm -rf /var/lib/apt/lists/*
+COPY --from=elixir:1.17-slim /usr/local/bin/elixir /usr/local/bin/elixir
+COPY --from=elixir:1.17-slim /usr/local/bin/mix /usr/local/bin/mix
+COPY --from=elixir:1.17-slim /usr/local/lib/elixir /usr/local/lib/elixir
+ENV MIX_ENV=prod
+COPY .devrail-plugins-build/devrail-plugin-elixir/v1.0.0/install.sh /opt/devrail/plugins/devrail-plugin-elixir/install.sh
+RUN chmod +x /opt/devrail/plugins/devrail-plugin-elixir/install.sh && bash /opt/devrail/plugins/devrail-plugin-elixir/install.sh
+```
+
+Cache hits are free — unchanged plugin sets re-use the existing image. First-build cost is plugin-dependent (typically 30 s – 2 min).
+
+### Versioning and immutability
+
+- Tag releases with semver tags (`v1.0.0`, `v1.1.0`). Consumers pin via `rev:` (tag or full SHA, never a branch).
+- The dev-toolchain resolver records the resolved SHA + content hash in the consumer's `.devrail.lock` on `make plugins-update`. Subsequent `make check` invocations refuse to run if the lockfile and `.devrail.yml` disagree.
+- Re-tagging an existing tag onto different code is detected via content_hash mismatch and surfaces as an error. Don't move tags; cut new ones.
+
+### Local development
+
+Test your plugin against a local consumer workspace before publishing:
+
+```bash
+# In the consumer's .devrail.yml
+languages:
+  - elixir
+
+plugins:
+  - source: file:///home/you/devrail-plugin-elixir
+    rev: v1.0.0
+    languages: [elixir]
+```
+
+```bash
+# Then in the consumer repo:
+make plugins-update     # resolver fetches the file:// fixture
+make check              # build pipeline + execution loop run the plugin
+```
+
+For automated plugin tests, mirror the harness pattern in `dev-toolchain/tests/test-plugin-execution.sh`: hermetic per-case workspace, hand-crafted loader cache, assertions via `jq` on the structured event log.
+
+### Override surface
+
+Consumers can override your manifest defaults from `.devrail.yml`:
+
+```yaml
+elixir:
+  linter: dialyxir          # replaces targets.lint.cmd
+  test: "mix test --cover"  # replaces targets.test.cmd
+```
+
+Override keys: `lint→linter`, `format_check`/`format_fix→formatter`, `fix→fixer`, `test→test`, `security→security`. Overrides take the entire command verbatim; `{paths}` is not interpolated for overrides.
+
+### Distribution
+
+For the v1.10 release, plugins are distributed via public git URLs (no central registry yet). Add yours to the community `awesome-devrail` list (TBD) once the discovery layer is in place.
+
+### What's NOT in scope for v1.10
+
+These features are deferred to later phases:
+
+- **Plugin signing / signature verification** — Story 13.10. For now, the lockfile content_hash detects tampering with a tag, but not authenticity.
+- **Sidecar containers** — see the design doc § "Container integration"; rejected for v1.
+- **Volume-mounted plugins** — same.
+- **Runtime install (no rebuild)** — same.
+- **Parallel plugin execution** — sequential per design; needs shared-state semantics first.
+
+### Plugin checklist
+
+Before publishing a `v1.0.0` release of your plugin:
+
+- [ ] `plugin.devrail.yml` has all required fields (`schema_version`, `name`, `version`, `devrail_min_version`, `targets`)
+- [ ] `name` matches `^[a-z][a-z0-9_-]*$`
+- [ ] `devrail_min_version` is set to the earliest dev-toolchain version you've tested against (typically `1.10.0`)
+- [ ] At least one `targets.<name>.cmd` is defined
+- [ ] Each `cmd` that uses `{paths}` declares `paths_var` and `paths_default`
+- [ ] `gates:` are workspace-relative (no absolute paths)
+- [ ] `container.install_script` (if used) is idempotent and uses `set -euo pipefail`
+- [ ] Plugin tested locally against a consumer workspace via `file://` URL
+- [ ] First tag is an annotated semver tag (`git tag -a v1.0.0`); not a branch ref
+- [ ] README documents which `.devrail.yml` `languages:` entries the plugin provides
