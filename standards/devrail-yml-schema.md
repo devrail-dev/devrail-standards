@@ -84,6 +84,48 @@ Can also be overridden at runtime via the `DEVRAIL_LOG_FORMAT=human` environment
 log_format: json
 ```
 
+### `plugins`
+
+**Type:** list of mappings (optional)
+
+**Default:** `[]` (empty)
+
+**Description:** Declares plugin sources that extend the dev-toolchain image with additional languages or tool integrations. The plugin loader (v1.10.0+) reads each entry, resolves `rev:` to an immutable SHA via `git ls-remote`, builds a project-local extended image (`devrail-local:<hash>`), and dispatches plugin-defined targets inside the existing `_lint` / `_format` / `_fix` / `_test` / `_security` recipes.
+
+**Entry shape:** Each plugin entry is a mapping with these keys:
+
+- **`source`** (string, required) — the plugin's git URL. `https://`, `git@`, `git://`, and `file://` schemes are supported. The trailing path component (after stripping `.git`) becomes the cache slug — collisions between two distinct sources with the same basename are rejected at resolve time.
+- **`rev`** (string, required) — an immutable git ref. Tags or full SHAs are accepted; branch refs are rejected. The resolver records the resolved SHA + content hash to `.devrail.lock`.
+- **`languages`** (list of strings, required) — which `languages:` entries this plugin supplies. The loader fails fast on conflicts (two plugins claiming the same language).
+
+**Validation rules:**
+
+- `source` must be a string, non-empty, and a valid git URL
+- `rev` must be a tag or full SHA — never a branch (the resolver rejects branch refs with a clear error)
+- `languages` must be a non-empty list of strings, each matching `^[a-z][a-z0-9_-]*$`
+- Two plugins cannot claim the same `languages:` entry
+- `make check` refuses to run if `.devrail.yml` and `.devrail.lock` disagree (mirrors `bundler` / `cargo` / `npm ci` behaviour)
+
+**Lockfile relationship:** Once `plugins:` is non-empty, `.devrail.lock` becomes a required sibling of `.devrail.yml` and is checked into VCS. Run `make plugins-update` to (re-)resolve refs and rewrite the lockfile. The lockfile records, per plugin: resolved SHA, manifest schema version, and content_hash. Re-tagging an existing tag onto different code is detected via content_hash mismatch.
+
+**Example:**
+
+```yaml
+languages:
+  - python
+  - bash
+  - elixir          # provided by a plugin
+
+plugins:
+  - source: github.com/community/devrail-plugin-elixir
+    rev: v1.0.0
+    languages: [elixir]
+```
+
+For per-language overrides of plugin-supplied languages, see the **Plugin-language overrides** subsection under "Per-Language Overrides" below — the override surface is symmetric with core languages.
+
+For full plugin authoring guidance, see [`contributing.md` § Contributing a plugin](contributing.md#contributing-a-plugin).
+
 ## Per-Language Overrides
 
 Per-language overrides are optional top-level keys matching the language name. They allow customization of tools for a specific language in the project. If omitted, default tools for the language are used.

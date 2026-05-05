@@ -135,7 +135,7 @@ development_status:
   13-3-implement-plugin-resolver-and-lockfile: done
   13-4-implement-extended-image-build-pipeline: done
   13-5-implement-plugin-execution-loop-and-json-aggregation: done
-  13-6-cut-v1-10-0-release-with-plugin-loader: backlog
+  13-6-cut-v1-10-0-release-with-plugin-loader: in-progress
   13-7-extract-kotlin-as-reference-plugin: backlog
   13-8-cut-v1-11-0-release-with-reference-plugin-extraction-recipe: backlog
   13-9-retire-monolithic-has-lang-blocks: backlog
