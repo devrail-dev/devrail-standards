@@ -122,6 +122,45 @@ python:
   type_check: mypy
 ```
 
+### Plugin-language overrides (v1.10.0+)
+
+Languages contributed by plugins (declared in `plugins:`) accept the same
+override keys. The override **replaces the plugin manifest's
+`targets.<name>.cmd`** for that target. The override applies only to the
+matching target — other targets fall back to the manifest's defaults.
+
+**Override key map (manifest target → `.devrail.yml` key):**
+
+| Plugin manifest target | Override key |
+|---|---|
+| `lint` | `linter` |
+| `format_check` | `formatter` |
+| `format_fix` | `formatter` |
+| `fix` | `fixer` |
+| `test` | `test` |
+| `security` | `security` |
+
+When you supply an override, the entire command string is taken verbatim —
+`{paths}` interpolation is not applied to overrides. Include any path
+arguments inline if you want them.
+
+**Example:**
+
+```yaml
+languages:
+  - python
+  - elixir          # provided by a plugin
+
+plugins:
+  - source: github.com/community/devrail-plugin-elixir
+    rev: v1.0.0
+    languages: [elixir]
+
+elixir:
+  linter: dialyxir          # replaces the plugin's default `mix credo --strict`
+  test: "mix test --cover"  # replaces the plugin's default `mix test`
+```
+
 ## Complete Examples
 
 ### Single-Language Project (Bash)

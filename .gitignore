@@ -50,3 +50,6 @@ terraform.rc
 
 # Node (documentation site tooling)
 node_modules/
+
+# Claude Code internal state
+.claude/

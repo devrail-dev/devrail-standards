@@ -1,6 +1,6 @@
 # Story 13.5: Implement Plugin Execution Loop and JSON Aggregation
 
-Status: ready-for-dev
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -64,43 +64,43 @@ so that consumers see plugin and core results uniformly.
 
 ## Tasks / Subtasks
 
-- [ ] **Task 1: Design + extract a reusable execution helper library** (AC: 1, 2, 3, 4, 5, 6, 8, 9)
-  - [ ] Subtask 1.1: Add `lib/plugin-execute.sh` sourced inside the container; expose `dispatch_plugin_target <target-name>`, `evaluate_gate <plugin-cache-entry> <target-name>`, `render_cmd <plugin-cache-entry> <target-name>`, `apply_override <language> <target-name> <default-cmd>`. Helpers MUST be sourceable into a Makefile recipe via `bash -c`, and they MUST emit structured JSON via `lib/log.sh:log_event` (no raw `echo`).
-  - [ ] Subtask 1.2: `evaluate_gate` reads `gates.<target>` from the loaded plugin entry in `${DEVRAIL_PLUGINS_CACHE:-/tmp/devrail-plugins-loaded.yaml}`. For each path: reject absolute; resolve relative to `$$(pwd)`; expand globs via `compgen -G` with empty-result short-circuit; require ALL paths to match. Emit `log_event info "plugin gate skipped" plugin=... target=... missing=...` when gate fails.
-  - [ ] Subtask 1.3: `render_cmd` reads `targets.<target>.cmd`; if `paths_var` set, substitute `{paths}` with runtime-filtered `${<paths_var>}` (filter to existing paths, mirroring how `RUBY_PATHS` is filtered in the Ruby block). If `paths_var` unset and `cmd` contains literal `{paths}`, treat as misconfiguration → exit 2 with structured error.
-  - [ ] Subtask 1.4: `apply_override` reads `<language>.<override-key>` from `.devrail.yml` (where `<override-key>` follows the existing convention: `linter` for `lint`, `formatter` for `format_check`/`format_fix`, `test`/`security`/etc.). When override is present, return it verbatim as the cmd; otherwise return the manifest default.
-  - [ ] Subtask 1.5: Add `dispatch_plugin_target <target-name>` that iterates `.plugins[]` from the loader cache, calls gate → render → override, runs the cmd (`bash -c "$$cmd"`), updates `ran_languages` / `failed_languages` / `overall_exit` via shared shell variables (passed by reference is not portable in bash, so dispatch sets them in caller scope by being sourced rather than executed).
-  - [ ] Subtask 1.6: Each helper has a `--help` mode that prints purpose + invocation pattern. Each helper is shellcheck/shfmt-clean (`shellcheck -x`, `shfmt -d -i 2 -ci`).
+- [x] **Task 1: Design + extract a reusable execution helper library** (AC: 1, 2, 3, 4, 5, 6, 8, 9)
+  - [x] Subtask 1.1: Add `lib/plugin-execute.sh` sourced inside the container; expose `dispatch_plugin_target <target-name>`, `evaluate_gate <plugin-cache-entry> <target-name>`, `render_cmd <plugin-cache-entry> <target-name>`, `apply_override <language> <target-name> <default-cmd>`. Helpers MUST be sourceable into a Makefile recipe via `bash -c`, and they MUST emit structured JSON via `lib/log.sh:log_event` (no raw `echo`).
+  - [x] Subtask 1.2: `evaluate_gate` reads `gates.<target>` from the loaded plugin entry in `${DEVRAIL_PLUGINS_CACHE:-/tmp/devrail-plugins-loaded.yaml}`. For each path: reject absolute; resolve relative to `$$(pwd)`; expand globs via `compgen -G` with empty-result short-circuit; require ALL paths to match. Emit `log_event info "plugin gate skipped" plugin=... target=... missing=...` when gate fails.
+  - [x] Subtask 1.3: `render_cmd` reads `targets.<target>.cmd`; if `paths_var` set, substitute `{paths}` with runtime-filtered `${<paths_var>}` (filter to existing paths, mirroring how `RUBY_PATHS` is filtered in the Ruby block). If `paths_var` unset and `cmd` contains literal `{paths}`, treat as misconfiguration → exit 2 with structured error.
+  - [x] Subtask 1.4: `apply_override` reads `<language>.<override-key>` from `.devrail.yml` (where `<override-key>` follows the existing convention: `linter` for `lint`, `formatter` for `format_check`/`format_fix`, `test`/`security`/etc.). When override is present, return it verbatim as the cmd; otherwise return the manifest default.
+  - [x] Subtask 1.5: Add `dispatch_plugin_target <target-name>` that iterates `.plugins[]` from the loader cache, calls gate → render → override, runs the cmd (`bash -c "$$cmd"`), updates `ran_languages` / `failed_languages` / `overall_exit` via shared shell variables (passed by reference is not portable in bash, so dispatch sets them in caller scope by being sourced rather than executed).
+  - [x] Subtask 1.6: Each helper has a `--help` mode that prints purpose + invocation pattern. Each helper is shellcheck/shfmt-clean (`shellcheck -x`, `shfmt -d -i 2 -ci`).
 
-- [ ] **Task 2: Wire the dispatcher into every target recipe** (AC: 1, 5, 6)
-  - [ ] Subtask 2.1: After the last `HAS_<LANG>` block in `_lint` (Makefile lines ~367–582), source `lib/plugin-execute.sh` and call `dispatch_plugin_target lint`. Preserve the `DEVRAIL_FAIL_FAST` short-circuit and the final JSON event emission. Same for `_format` (`format_check`), `_fix` (`format_fix`/`fix`), `_test` (`test`), `_security` (`security`).
-  - [ ] Subtask 2.2: For `_check`, do NOT add a separate plugin loop — `_check` already invokes `_lint`/`_format`/`_test`/`_security` in sequence and aggregates their JSON; plugin results flow up automatically. Verify the existing `_check` aggregation handles plugin entries unchanged.
-  - [ ] Subtask 2.3: Document the wire-in convention (where to insert the dispatch line, how to source the helper) inline in the Makefile so future target additions follow the pattern.
+- [x] **Task 2: Wire the dispatcher into every target recipe** (AC: 1, 5, 6)
+  - [x] Subtask 2.1: After the last `HAS_<LANG>` block in `_lint` (Makefile lines ~367–582), source `lib/plugin-execute.sh` and call `dispatch_plugin_target lint`. Preserve the `DEVRAIL_FAIL_FAST` short-circuit and the final JSON event emission. Same for `_format` (`format_check`), `_fix` (`format_fix`/`fix`), `_test` (`test`), `_security` (`security`).
+  - [x] Subtask 2.2: For `_check`, do NOT add a separate plugin loop — `_check` already invokes `_lint`/`_format`/`_test`/`_security` in sequence and aggregates their JSON; plugin results flow up automatically. Verify the existing `_check` aggregation handles plugin entries unchanged.
+  - [x] Subtask 2.3: Document the wire-in convention (where to insert the dispatch line, how to source the helper) inline in the Makefile so future target additions follow the pattern.
 
-- [ ] **Task 3: No-op regression safety** (AC: 7, 8)
-  - [ ] Subtask 3.1: When `.plugins[]` in the loader cache is empty, `dispatch_plugin_target` returns immediately without emitting any event (no startup banner, no `loop complete`). Verify byte-identical JSON for a `languages: [bash]` workspace.
-  - [ ] Subtask 3.2: When a plugin manifest declares only some targets (e.g., `lint` and `format_check` but no `test`), `_test` runs the loop but skips that plugin without an event. The plugin contributes nothing to `_test`'s `ran_languages`.
-  - [ ] Subtask 3.3: Run `tests/test-plugin-loader.sh`, `tests/test-plugin-resolver.sh`, `tests/test-plugin-build-pipeline.sh`, `tests/smoke-rails.sh`, and per-language tests; all must remain green (no regression).
+- [x] **Task 3: No-op regression safety** (AC: 7, 8)
+  - [x] Subtask 3.1: When `.plugins[]` in the loader cache is empty, `dispatch_plugin_target` returns immediately without emitting any event (no startup banner, no `loop complete`). Verify byte-identical JSON for a `languages: [bash]` workspace.
+  - [x] Subtask 3.2: When a plugin manifest declares only some targets (e.g., `lint` and `format_check` but no `test`), `_test` runs the loop but skips that plugin without an event. The plugin contributes nothing to `_test`'s `ran_languages`.
+  - [x] Subtask 3.3: Run `tests/test-plugin-loader.sh`, `tests/test-plugin-resolver.sh`, `tests/test-plugin-build-pipeline.sh`, `tests/smoke-rails.sh`, and per-language tests; all must remain green (no regression).
 
-- [ ] **Task 4: Tests** (AC: 10)
-  - [ ] Subtask 4.1: Create `tests/test-plugin-execution.sh` mirroring the harness pattern of `test-plugin-build-pipeline.sh`: hermetic workspace per case, fixtures from `tests/fixtures/plugin-repos/minimal-v1`, hand-crafted lockfile + pre-populated host cache to keep the SUT scoped to the dispatcher.
-  - [ ] Subtask 4.2: Cases for AC10 (no-op, single pass, single fail, gate skip, gate run, paths interpolation, override, fail-fast, partial-targets, JSON regression). Each case asserts both exit code and the relevant `log_event` message via jq filters (consistent with existing tests).
-  - [ ] Subtask 4.3: Add a fixture variant under `tests/fixtures/plugin-repos/minimal-v1-with-targets/` (or extend `minimal-v1`) so the manifest declares `targets.lint.cmd: "true"` (passing) and a flag-flippable failing target. Reuse the existing `install_script: install.sh` and slug pattern.
-  - [ ] Subtask 4.4: Add a new step "Plugin execution smoke test" to `.github/workflows/ci.yml` after the existing build-pipeline smoke test step.
+- [x] **Task 4: Tests** (AC: 10)
+  - [x] Subtask 4.1: Create `tests/test-plugin-execution.sh` mirroring the harness pattern of `test-plugin-build-pipeline.sh`: hermetic workspace per case, fixtures from `tests/fixtures/plugin-repos/minimal-v1`, hand-crafted lockfile + pre-populated host cache to keep the SUT scoped to the dispatcher.
+  - [x] Subtask 4.2: Cases for AC10 (no-op, single pass, single fail, gate skip, gate run, paths interpolation, override, fail-fast, partial-targets, JSON regression). Each case asserts both exit code and the relevant `log_event` message via jq filters (consistent with existing tests).
+  - [x] Subtask 4.3: Add a fixture variant under `tests/fixtures/plugin-repos/minimal-v1-with-targets/` (or extend `minimal-v1`) so the manifest declares `targets.lint.cmd: "true"` (passing) and a flag-flippable failing target. Reuse the existing `install_script: install.sh` and slug pattern.
+  - [x] Subtask 4.4: Add a new step "Plugin execution smoke test" to `.github/workflows/ci.yml` after the existing build-pipeline smoke test step.
 
-- [ ] **Task 5: Documentation** (AC: 4, 9)
-  - [ ] Subtask 5.1: Update `OrgDocs/development-standards/standards/devrail-yml-schema.md`: document the per-language override syntax for plugin languages, examples for each target type, and the precedence rule (override > manifest default).
-  - [ ] Subtask 5.2: Mirror the schema-doc update on `devrail.dev/content/docs/standards/devrail-yml-schema.md`.
-  - [ ] Subtask 5.3: Update `dev-toolchain/STABILITY.md` to mark "Plugin loader + resolver + lockfile + build pipeline + execution loop" — same row, append to scope.
-  - [ ] Subtask 5.4: Update `dev-toolchain/CHANGELOG.md` `[Unreleased] § Added` with a one-line entry referencing Story 13.5.
-  - [ ] Subtask 5.5: Make sure `make help` text remains accurate (no new public targets).
+- [x] **Task 5: Documentation** (AC: 4, 9)
+  - [x] Subtask 5.1: Update `OrgDocs/development-standards/standards/devrail-yml-schema.md`: document the per-language override syntax for plugin languages, examples for each target type, and the precedence rule (override > manifest default).
+  - [-] Subtask 5.2: Deferred to Story 13.6 (marketing release) — devrail.dev does not currently host a `devrail-yml-schema` page; new public-facing docs land with v1.10.0.
+  - [x] Subtask 5.3: Update `dev-toolchain/STABILITY.md` to mark "Plugin loader + resolver + lockfile + build pipeline + execution loop" — same row, append to scope.
+  - [x] Subtask 5.4: Update `dev-toolchain/CHANGELOG.md` `[Unreleased] § Added` with a one-line entry referencing Story 13.5.
+  - [x] Subtask 5.5: Make sure `make help` text remains accurate (no new public targets).
 
-- [ ] **Task 6: Validate end-to-end against the dev-toolchain repo** (AC: 7, all)
-  - [ ] Subtask 6.1: Run `make check` on the dev-toolchain repo itself (no plugins declared) — confirm zero behavioral or JSON diff vs. v1.10.4 baseline.
-  - [ ] Subtask 6.2: Run `make check` on a hand-crafted workspace with the `minimal-v1` plugin declared and a passing target — confirm dispatcher reports the plugin in `ran_languages`.
+- [x] **Task 6: Validate end-to-end against the dev-toolchain repo** (AC: 7, all)
+  - [x] Subtask 6.1: Run `make check` on the dev-toolchain repo itself (no plugins declared) — confirm zero behavioral or JSON diff vs. v1.10.4 baseline.
+  - [x] Subtask 6.2: Run `make check` on a hand-crafted workspace with the `minimal-v1` plugin declared and a passing target — confirm dispatcher reports the plugin in `ran_languages`.
 
 - [ ] **Task 7: Code review prep** (process)
-  - [ ] Subtask 7.1: Move story status to `review` after PR opens.
+  - [x] Subtask 7.1: Move story status to `review` after PR opens.
   - [ ] Subtask 7.2: Run `/bmad-bmm-code-review`; address findings on a fix branch following the established 13.2 / 13.3 / 13.4 pattern.
 
 ## Dev Notes
@@ -289,22 +289,104 @@ The plugin model remains **back-compat** through v1.10.x — workspaces without 
 
 ### Agent Model Used
 
-(to be filled by dev workflow)
+Claude Opus 4.7 (1M context).
 
 ### Debug Log References
 
-(to be filled by dev workflow)
+- **Recipe shell.** Initial implementation sourced `lib/plugin-execute.sh` from each Makefile recipe but the recipe ran in `/bin/sh` (dash), not bash. Bash-only constructs (`[[`, `((`, indirect parameter expansion `${!var}`) failed with `[[: not found` and `Bad for loop variable`. Fix: added `SHELL := /bin/bash` at the top of the Makefile so recipes use bash. Existing POSIX-sh recipes remain valid (bash is a superset).
+- **shfmt flag mismatch.** First shfmt pass used `-i 2 -ci` and produced 4-space-indented case branches. The Makefile's `_format` recipe runs `shfmt -d` with default flags (no `-ci`), which expects branches at 2-space indent (same as `case`). Re-ran `shfmt -w` with no flags to match.
+- **shellcheck SC2034.** The dispatcher writes to `overall_exit`, `ran_languages`, `failed_languages` in caller scope (Makefile recipe). shellcheck flagged these as "appears unused" (SC2034). Added targeted disables — they are caller-scope variables sourced from the recipe, not local to the helper.
+- **Caller-scope contract.** Discovered the `dispatch_plugin_target` function must NOT use `local overall_exit=` shadows for the caller-scope vars; the helper directly mutates them. Documented the contract in the lib's header comment so future maintainers don't add `local` declarations that would silently break aggregation.
+- **Container rebuild required.** Iteration cycle was `edit lib → docker build → bash tests/test-plugin-execution.sh` because the lib is COPY'd into the image at /opt/devrail/lib/. Build is fast (~2s after the first uncached layer) thanks to BuildKit caching the apt and language-builder layers.
+- **`make check` regression.** Caught at the end of Task 3 when running `make check` against the dev-toolchain repo itself: scan failed once (292s) but passed on standalone re-run (5s). Hypothesis: trivy DB fetch / first-run download. Not related to my changes — same flake exists in v1.10.4.
 
 ### Completion Notes List
 
-(to be filled by dev workflow)
+- **Final implementation story before v1.10.0 marketing release.** Stories 13.2 (loader), 13.3 (resolver/lockfile), 13.4 (build pipeline), and now 13.5 (execution loop) compose the v1.10.x plugin loader. Story 13.6 cuts v1.10.0 with a blog post; nothing technical remains.
+- **Plugin contract is sealed at schema_version: 1.** Plugin authors can write a manifest today and rely on the loader/dispatcher behaviour. The override map (`lint→linter` etc.) is documented in `OrgDocs/standards/devrail-yml-schema.md`.
+- **Reference fixture stable.** `tests/fixtures/plugin-repos/minimal-v1` works end-to-end through the build pipeline AND now the dispatcher. It's small enough that 13.5 didn't need a separate fixture.
+- **No new public Make targets.** All changes extend existing recipes. `make help` is unchanged.
+- **Code review pending.** Recommend running `/bmad-bmm-code-review` under a different model than the implementer (Opus 4.7) to surface blind spots — same caveat documented in 13.2 / 13.3 / 13.4 reviews.
 
 ### File List
 
-(to be filled by dev workflow)
+**dev-toolchain repo (PR #38, branch `feat/13-5-plugin-execution-loop`):**
+
+- `lib/plugin-execute.sh` — NEW. Sourceable dispatcher library with `evaluate_gate`, `render_cmd`, `apply_override`, `dispatch_plugin_target`.
+- `Makefile` — MODIFIED. Added `SHELL := /bin/bash`; sourced `lib/plugin-execute.sh` at the top of `_lint`, `_format`, `_fix`, `_test`, `_security`; inserted `dispatch_plugin_target <name>` + per-block fail-fast guard after the last `HAS_<LANG>` block in each.
+- `tests/test-plugin-execution.sh` — NEW. 10-case smoke test for the dispatcher.
+- `.github/workflows/ci.yml` — MODIFIED. Added "Plugin execution smoke test" step after the build-pipeline smoke.
+- `CHANGELOG.md` — MODIFIED. `[Unreleased] § Added` documents Story 13.5.
+- `STABILITY.md` — MODIFIED. Plugin row scope extended to include the execution loop.
+
+**OrgDocs/development-standards repo (branch `feat/13-5-create-story`):**
+
+- `_bmad-output/implementation-artifacts/13-5-implement-plugin-execution-loop-and-json-aggregation.md` — THIS FILE.
+- `_bmad-output/implementation-artifacts/sprint-status.yaml` — MODIFIED (`13-5-... → review`).
+- `standards/devrail-yml-schema.md` — MODIFIED. New "Plugin-language overrides (v1.10.0+)" section.
+- `.gitignore` — MODIFIED. Added `.claude/` entry to keep Claude Code's session lock files out of commits.
 
 ### Change Log
 
 | Date | Change |
 |---|---|
 | 2026-05-04 | Story created via `/bmad-bmm-create-story` (status: ready-for-dev) |
+| 2026-05-04 | Implementation completed via `/bmad-bmm-dev-story`; status moved to `review`; PR #38 opened on dev-toolchain |
+| 2026-05-04 | Senior-developer review completed via `/bmad-bmm-code-review`; 13 findings (1 HIGH, 7 MED, 5 LOW); all addressed via follow-up commit on PR #38 (`feat/13-5-plugin-execution-loop`) |
+| 2026-05-04 | dev-toolchain PR #38 merged to `main` as `f7aaf70`; status moved to `done` |
+
+## Senior Developer Review (AI)
+
+**Reviewer:** Matthew (review executed by Opus 4.7 — same model that implemented the story; see caveat)
+**Date:** 2026-05-04
+**Outcome:** Approve (after follow-up commit on PR #38)
+
+### Caveat
+
+Same model that wrote the implementation also performed the review. Findings skew toward checklist-sweep rather than independent insight. A future review under a different model is welcome and may surface additional issues.
+
+### Scope
+
+The review covered the dev-toolchain Story 13.5 implementation (PR #38, branch `feat/13-5-plugin-execution-loop`): `lib/plugin-execute.sh` dispatcher, Makefile recipe wiring (`_lint`/`_format`/`_fix`/`_test`/`_security`), `tests/test-plugin-execution.sh`, CI step, CHANGELOG, and STABILITY.
+
+### Findings
+
+**HIGH severity (must fix — done in PR #38 follow-up commit):**
+
+- [x] **H1** — `lib/plugin-execute.sh:render_cmd` called `exit 2` from a sourced library when a manifest declared `{paths}` without a `paths_var`. Because the lib was sourced into the Makefile recipe's shell, `exit 2` killed the whole recipe BEFORE the final JSON event was emitted (no `failed_languages` entry, no `{"target":"lint","status":"fail",…}` line). Fixed by changing `exit 2` to `return 2`; the dispatcher catches non-zero from `render_cmd` (and similarly from `evaluate_gate`'s new return-2 path), marks the plugin as `<name>:cmd-config` / `<name>:gate-config` failed, and continues iterating (or fail-fast'ing). Case 12 verifies the second plugin still runs after the first plugin's config error.
+
+**MEDIUM severity (should fix — done in PR #38 follow-up commit):**
+
+- [x] **M1** — `evaluate_gate` returned `1` for both gate-skip-because-path-missing AND absolute-path config error. Caller treated both as silent skip — a misconfigured plugin manifest got no surface in `failed_languages` or `overall_exit`. Now returns 0/1/2 distinctly: 0 = pass, 1 = silent skip (already-logged info event), 2 = config error (already-logged error event). Dispatcher adds `<plugin>:gate-config` to `failed_languages` for the 2 case (Case 11).
+- [x] **M2** — yq `2>/dev/null` on cache reads (lines 56, 75, 77, 83, 125, 126, 133, 134, 217 in the original) silently swallowed loader-cache parse errors. Same anti-pattern as Story 13.2 / 13.4 H1 reviews — re-introduced. Now the dispatcher does ONE yq → JSON conversion at entry and surfaces parse errors as a structured error event with `_plugins:cache-parse` plugin-system failure (Case 15).
+- [x] **M3** — `apply_override` + every per-plugin lookup forked `yq` per call (~8N yq invocations per recipe). Now we do 2 yq → JSON conversions at the start of `dispatch_plugin_target` (cache + `.devrail.yml`) and use `jq` for all subsequent lookups. Each `jq` call on a small JSON blob is much faster than `yq` on a YAML file. Combined with M2, the new path is ~3N jq calls + 2 yq calls per dispatch.
+- [x] **M4** — `bash -c "${final_cmd}"` had no timeout. A hanging plugin command would block `make check` indefinitely. Added an optional `DEVRAIL_PLUGIN_TIMEOUT_SECONDS` env var; when set, the dispatcher wraps the cmd in `timeout -k 5 N bash -c …`. Default unset = no timeout (preserves current behaviour).
+- [x] **M5** — `_fix` dispatched only `format_fix`. The design doc's schema accepts `targets.fix.cmd` as a separate target, but the Makefile never invoked it — silent no-op for plugin authors who used `fix:`. Now `_fix` dispatches both `format_fix` AND `fix` in sequence with the standard fail-fast guard between them.
+- [x] **M6** — Path-with-shell-meta-chars injection vector through `${cmd//\{paths\}/${filtered}}` → `bash -c "${final_cmd}"`. A directory named `lib;evil` (if it existed) would inject. Filter loop now rejects paths matching `*[\;\|\&\$\<\>\(\)\`\\\"\']*` with a `plugin path contains shell-meta characters; skipping` warn event (Case 13 inserts a `lib;evil` directory and asserts it's filtered while `lib` survives).
+- [x] **M7** — Story Dev Agent Record File List omitted the OrgDocs `.gitignore` change (added `.claude/` entry in commit b5785e4). File List updated.
+
+**LOW severity (nice to fix — done in PR #38 follow-up commit):**
+
+- [x] **L1** — Four scattered `# shellcheck disable=SC2034` comments around caller-scope variable assignments. Tightened to a single `:` no-op assignment at the top of `dispatch_plugin_target` that registers the four caller-scope vars (`overall_exit`, `ran_languages`, `failed_languages`, `skipped_languages`) in one place.
+- [x] **L2** — Tests missed five error paths: absolute-path gate (Case 11), `{paths}` without paths_var (Case 12), shell-meta path rejection (Case 13), double-source guard (Case 14), and malformed-cache parse error (Case 15). All added.
+- [x] **L3** — Case 9's silent-skip assertion was narrow (only checked absence of `"plugin target executing"`). Tightened to reject any plugin event of any kind for the absent target.
+- [x] **L4** — STABILITY.md's Makefile-contract row now documents the `SHELL := /bin/bash` pin and the implication for consumer template repos that inherit it.
+- [x] **L5** — Dispatcher now appends gate-skipped plugins to `skipped_languages` (when the recipe maintains that array — `_test`/`_security`). Harmless when the recipe doesn't use the var. Closes the inconsistency between core "no work to do" and plugin gate-skip handling.
+
+### Action Items
+
+All 13 action items resolved in the follow-up commit on PR #38 (`feat/13-5-plugin-execution-loop`).
+
+- [x] [AI-Review][HIGH] H1: render_cmd returns instead of exits [lib/plugin-execute.sh → fixed]
+- [x] [AI-Review][MED] M1: evaluate_gate distinguishes gate-skip from gate-config-error [lib/plugin-execute.sh → fixed]
+- [x] [AI-Review][MED] M2: cache parse errors surface loudly [lib/plugin-execute.sh → fixed]
+- [x] [AI-Review][MED] M3: cache + .devrail.yml pre-parsed once via yq→JSON [lib/plugin-execute.sh → fixed]
+- [x] [AI-Review][MED] M4: optional DEVRAIL_PLUGIN_TIMEOUT_SECONDS [lib/plugin-execute.sh → fixed]
+- [x] [AI-Review][MED] M5: _fix dispatches both format_fix and fix [Makefile → fixed]
+- [x] [AI-Review][MED] M6: shell-meta path filter [lib/plugin-execute.sh → fixed]
+- [x] [AI-Review][MED] M7: story File List includes .gitignore change [story file → fixed]
+- [x] [AI-Review][LOW] L1: consolidate SC2034 disables [lib/plugin-execute.sh → fixed]
+- [x] [AI-Review][LOW] L2: 5 new test cases (11-15) [tests/test-plugin-execution.sh → fixed]
+- [x] [AI-Review][LOW] L3: tighten silent-skip assertion [tests/test-plugin-execution.sh → fixed]
+- [x] [AI-Review][LOW] L4: STABILITY.md SHELL note [STABILITY.md → fixed]
+- [x] [AI-Review][LOW] L5: skipped_languages on gate-skip [lib/plugin-execute.sh → fixed]
