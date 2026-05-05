@@ -324,6 +324,7 @@ Claude Opus 4.7 (1M context).
 - `_bmad-output/implementation-artifacts/13-5-implement-plugin-execution-loop-and-json-aggregation.md` — THIS FILE.
 - `_bmad-output/implementation-artifacts/sprint-status.yaml` — MODIFIED (`13-5-... → review`).
 - `standards/devrail-yml-schema.md` — MODIFIED. New "Plugin-language overrides (v1.10.0+)" section.
+- `.gitignore` — MODIFIED. Added `.claude/` entry to keep Claude Code's session lock files out of commits.
 
 ### Change Log
 
@@ -331,3 +332,60 @@ Claude Opus 4.7 (1M context).
 |---|---|
 | 2026-05-04 | Story created via `/bmad-bmm-create-story` (status: ready-for-dev) |
 | 2026-05-04 | Implementation completed via `/bmad-bmm-dev-story`; status moved to `review`; PR #38 opened on dev-toolchain |
+| 2026-05-04 | Senior-developer review completed via `/bmad-bmm-code-review`; 13 findings (1 HIGH, 7 MED, 5 LOW); all addressed via follow-up commit on PR #38 (`feat/13-5-plugin-execution-loop`) |
+
+## Senior Developer Review (AI)
+
+**Reviewer:** Matthew (review executed by Opus 4.7 — same model that implemented the story; see caveat)
+**Date:** 2026-05-04
+**Outcome:** Approve (after follow-up commit on PR #38)
+
+### Caveat
+
+Same model that wrote the implementation also performed the review. Findings skew toward checklist-sweep rather than independent insight. A future review under a different model is welcome and may surface additional issues.
+
+### Scope
+
+The review covered the dev-toolchain Story 13.5 implementation (PR #38, branch `feat/13-5-plugin-execution-loop`): `lib/plugin-execute.sh` dispatcher, Makefile recipe wiring (`_lint`/`_format`/`_fix`/`_test`/`_security`), `tests/test-plugin-execution.sh`, CI step, CHANGELOG, and STABILITY.
+
+### Findings
+
+**HIGH severity (must fix — done in PR #38 follow-up commit):**
+
+- [x] **H1** — `lib/plugin-execute.sh:render_cmd` called `exit 2` from a sourced library when a manifest declared `{paths}` without a `paths_var`. Because the lib was sourced into the Makefile recipe's shell, `exit 2` killed the whole recipe BEFORE the final JSON event was emitted (no `failed_languages` entry, no `{"target":"lint","status":"fail",…}` line). Fixed by changing `exit 2` to `return 2`; the dispatcher catches non-zero from `render_cmd` (and similarly from `evaluate_gate`'s new return-2 path), marks the plugin as `<name>:cmd-config` / `<name>:gate-config` failed, and continues iterating (or fail-fast'ing). Case 12 verifies the second plugin still runs after the first plugin's config error.
+
+**MEDIUM severity (should fix — done in PR #38 follow-up commit):**
+
+- [x] **M1** — `evaluate_gate` returned `1` for both gate-skip-because-path-missing AND absolute-path config error. Caller treated both as silent skip — a misconfigured plugin manifest got no surface in `failed_languages` or `overall_exit`. Now returns 0/1/2 distinctly: 0 = pass, 1 = silent skip (already-logged info event), 2 = config error (already-logged error event). Dispatcher adds `<plugin>:gate-config` to `failed_languages` for the 2 case (Case 11).
+- [x] **M2** — yq `2>/dev/null` on cache reads (lines 56, 75, 77, 83, 125, 126, 133, 134, 217 in the original) silently swallowed loader-cache parse errors. Same anti-pattern as Story 13.2 / 13.4 H1 reviews — re-introduced. Now the dispatcher does ONE yq → JSON conversion at entry and surfaces parse errors as a structured error event with `_plugins:cache-parse` plugin-system failure (Case 15).
+- [x] **M3** — `apply_override` + every per-plugin lookup forked `yq` per call (~8N yq invocations per recipe). Now we do 2 yq → JSON conversions at the start of `dispatch_plugin_target` (cache + `.devrail.yml`) and use `jq` for all subsequent lookups. Each `jq` call on a small JSON blob is much faster than `yq` on a YAML file. Combined with M2, the new path is ~3N jq calls + 2 yq calls per dispatch.
+- [x] **M4** — `bash -c "${final_cmd}"` had no timeout. A hanging plugin command would block `make check` indefinitely. Added an optional `DEVRAIL_PLUGIN_TIMEOUT_SECONDS` env var; when set, the dispatcher wraps the cmd in `timeout -k 5 N bash -c …`. Default unset = no timeout (preserves current behaviour).
+- [x] **M5** — `_fix` dispatched only `format_fix`. The design doc's schema accepts `targets.fix.cmd` as a separate target, but the Makefile never invoked it — silent no-op for plugin authors who used `fix:`. Now `_fix` dispatches both `format_fix` AND `fix` in sequence with the standard fail-fast guard between them.
+- [x] **M6** — Path-with-shell-meta-chars injection vector through `${cmd//\{paths\}/${filtered}}` → `bash -c "${final_cmd}"`. A directory named `lib;evil` (if it existed) would inject. Filter loop now rejects paths matching `*[\;\|\&\$\<\>\(\)\`\\\"\']*` with a `plugin path contains shell-meta characters; skipping` warn event (Case 13 inserts a `lib;evil` directory and asserts it's filtered while `lib` survives).
+- [x] **M7** — Story Dev Agent Record File List omitted the OrgDocs `.gitignore` change (added `.claude/` entry in commit b5785e4). File List updated.
+
+**LOW severity (nice to fix — done in PR #38 follow-up commit):**
+
+- [x] **L1** — Four scattered `# shellcheck disable=SC2034` comments around caller-scope variable assignments. Tightened to a single `:` no-op assignment at the top of `dispatch_plugin_target` that registers the four caller-scope vars (`overall_exit`, `ran_languages`, `failed_languages`, `skipped_languages`) in one place.
+- [x] **L2** — Tests missed five error paths: absolute-path gate (Case 11), `{paths}` without paths_var (Case 12), shell-meta path rejection (Case 13), double-source guard (Case 14), and malformed-cache parse error (Case 15). All added.
+- [x] **L3** — Case 9's silent-skip assertion was narrow (only checked absence of `"plugin target executing"`). Tightened to reject any plugin event of any kind for the absent target.
+- [x] **L4** — STABILITY.md's Makefile-contract row now documents the `SHELL := /bin/bash` pin and the implication for consumer template repos that inherit it.
+- [x] **L5** — Dispatcher now appends gate-skipped plugins to `skipped_languages` (when the recipe maintains that array — `_test`/`_security`). Harmless when the recipe doesn't use the var. Closes the inconsistency between core "no work to do" and plugin gate-skip handling.
+
+### Action Items
+
+All 13 action items resolved in the follow-up commit on PR #38 (`feat/13-5-plugin-execution-loop`).
+
+- [x] [AI-Review][HIGH] H1: render_cmd returns instead of exits [lib/plugin-execute.sh → fixed]
+- [x] [AI-Review][MED] M1: evaluate_gate distinguishes gate-skip from gate-config-error [lib/plugin-execute.sh → fixed]
+- [x] [AI-Review][MED] M2: cache parse errors surface loudly [lib/plugin-execute.sh → fixed]
+- [x] [AI-Review][MED] M3: cache + .devrail.yml pre-parsed once via yq→JSON [lib/plugin-execute.sh → fixed]
+- [x] [AI-Review][MED] M4: optional DEVRAIL_PLUGIN_TIMEOUT_SECONDS [lib/plugin-execute.sh → fixed]
+- [x] [AI-Review][MED] M5: _fix dispatches both format_fix and fix [Makefile → fixed]
+- [x] [AI-Review][MED] M6: shell-meta path filter [lib/plugin-execute.sh → fixed]
+- [x] [AI-Review][MED] M7: story File List includes .gitignore change [story file → fixed]
+- [x] [AI-Review][LOW] L1: consolidate SC2034 disables [lib/plugin-execute.sh → fixed]
+- [x] [AI-Review][LOW] L2: 5 new test cases (11-15) [tests/test-plugin-execution.sh → fixed]
+- [x] [AI-Review][LOW] L3: tighten silent-skip assertion [tests/test-plugin-execution.sh → fixed]
+- [x] [AI-Review][LOW] L4: STABILITY.md SHELL note [STABILITY.md → fixed]
+- [x] [AI-Review][LOW] L5: skipped_languages on gate-skip [lib/plugin-execute.sh → fixed]
