@@ -1,6 +1,6 @@
 # Story 13.5: Implement Plugin Execution Loop and JSON Aggregation
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -333,6 +333,7 @@ Claude Opus 4.7 (1M context).
 | 2026-05-04 | Story created via `/bmad-bmm-create-story` (status: ready-for-dev) |
 | 2026-05-04 | Implementation completed via `/bmad-bmm-dev-story`; status moved to `review`; PR #38 opened on dev-toolchain |
 | 2026-05-04 | Senior-developer review completed via `/bmad-bmm-code-review`; 13 findings (1 HIGH, 7 MED, 5 LOW); all addressed via follow-up commit on PR #38 (`feat/13-5-plugin-execution-loop`) |
+| 2026-05-04 | dev-toolchain PR #38 merged to `main` as `f7aaf70`; status moved to `done` |
 
 ## Senior Developer Review (AI)
 
