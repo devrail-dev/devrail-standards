@@ -648,6 +648,152 @@ These features are deferred to later phases:
 - **Runtime install (no rebuild)** — same.
 - **Parallel plugin execution** — sequential per design; needs shared-state semantics first.
 
+### Extracting a core language as a plugin
+
+The reference example for "I want to take an existing core DevRail language and ship it as an external plugin" is **`devrail-plugin-kotlin`** ([github.com/devrail-dev/devrail-plugin-kotlin](https://github.com/devrail-dev/devrail-plugin-kotlin)), built during Story 13.7. The recipe below is what we did for Kotlin and what other contributors should do for the next language.
+
+> **Important:** During v1.10.x and v1.11.x the extraction is **additive** — the language stays in dev-toolchain core AND a plugin exists. v2.0.0 (Story 13.9) removes the core path; until then, consumers can use either. The loader's "core wins over plugin" precedence rule means that if a consumer lists the language in `languages:`, they hit the in-core path; to exercise the plugin they must put the language ONLY in the plugin's `languages:` block. Document this for your plugin's users.
+
+#### Step 1: Identify the surface to extract
+
+For a target language `LANG`, find every place dev-toolchain touches it. The Kotlin example:
+
+| Surface | Files | What it does |
+|---|---|---|
+| Builder stage | `Dockerfile` (lines around `FROM eclipse-temurin:21-jdk AS jdk-builder`) | Source for the JDK that gets COPY'd into runtime |
+| Runtime COPY | `Dockerfile` (lines around `COPY --from=jdk-builder /opt/java/openjdk`) | What lands in the runtime image |
+| Runtime PATH | `Dockerfile` `ENV PATH=...` | How tools are discoverable |
+| Install script | `scripts/install-LANG.sh` | Install logic for tools beyond the language runtime (linters, formatters, build tools) |
+| Tests | `tests/test-LANG.sh` | Runtime verification |
+| Makefile var | `HAS_LANG := $(filter LANG,$(LANGUAGES))` | Detection variable |
+| Makefile blocks | `if [ -n "$(HAS_LANG)" ]; then ... fi;` in `_lint`, `_format`, `_fix`, `_test`, `_security` | Per-target behaviour |
+| Pre-commit | `.pre-commit-config.yaml` (template repos) | Local hook config (NOT extracted in v1 — pre-commit support is separate from plugin loader) |
+
+`grep -nE "HAS_<LANG>|<lang>" Makefile Dockerfile scripts/install-<lang>.sh tests/test-<lang>.sh` is the fastest way to inventory.
+
+#### Step 2: Map Makefile blocks → plugin manifest targets
+
+Each `if [ -n "$(HAS_LANG)" ]; then ... fi` block in dev-toolchain becomes one plugin manifest target. Translation rules:
+
+- The shell command inside the block (e.g., `ktlint`, `gradle test --no-daemon`) becomes `targets.<name>.cmd`.
+- A path glob the core block tests (`find . -name '*.kt'`) becomes `gates.<name>: ["<path>"]` — but use the project-marker file (`build.gradle.kts`, `Cargo.toml`) when possible because the loader's gate mechanism only checks file existence, not file contents.
+- Multi-tool blocks (Kotlin runs ktlint AND detekt under `_lint`) collapse to ONE cmd via `&&`. The v1 contract is one cmd per target. Document this in your plugin README.
+- Languages with `*_PATHS` runtime-filtering (Ruby's `RUBY_PATHS`) translate to `paths_var` + `paths_default` on the manifest target. The dispatcher's `{paths}` interpolation handles the existing-path filter.
+
+The Kotlin extraction's mapping (in `devrail-plugin-kotlin/plugin.devrail.yml`):
+
+```yaml
+targets:
+  lint:
+    cmd: "ktlint && (test -f detekt.yml && detekt-cli --build-upon-default-config --config detekt.yml || detekt-cli --build-upon-default-config)"
+  format_check: { cmd: "ktlint --format --dry-run" }
+  format_fix:   { cmd: "ktlint --format" }
+  test:         { cmd: "gradle test --no-daemon" }
+  security:     { cmd: "gradle dependencyCheckAnalyze --no-daemon" }
+gates:
+  lint: ["build.gradle.kts"]
+  # ... same gate for every target
+```
+
+#### Step 3: Port the install script
+
+Plugin install scripts run during `docker build` of the consumer's `Dockerfile.devrail`. At that point the dev-toolchain libs (`/opt/devrail/lib/log.sh`, `platform.sh`) are NOT yet copied into the layer being built. So:
+
+- **Strip every `source "${DEVRAIL_LIB}/log.sh"` and `source "${DEVRAIL_LIB}/platform.sh"`.** Replace `log_info "..."` calls with `printf '[install-<lang>] %s\n' "$msg" >&2`. Self-contained scripts are the contract for plugin authors.
+- **Keep `set -euo pipefail`.** Idempotency checks (`command -v ktlint &>/dev/null && return`) keep `make plugins-update + make check` cycles fast on re-run.
+- **No `require_cmd` calls** — that helper lives in the dev-toolchain libs you're not allowed to source. Inline a simple `command -v <bin>` check at the bottom for verification, or rely on `set -e` + the explicit version checks (`ktlint --version`).
+- **Keep cleanup traps** for any `mktemp -d` you create.
+
+The Kotlin port at `devrail-plugin-kotlin/install.sh` is a complete worked example — compare it side-by-side with `dev-toolchain/scripts/install-kotlin.sh` to see the deltas.
+
+#### Step 4: Write the container fragment
+
+The plugin manifest's `container:` block must reproduce dev-toolchain's runtime layer for the language. For Kotlin:
+
+```yaml
+container:
+  base_image: eclipse-temurin:21-jdk     # the same builder stage dev-toolchain uses
+  copy_from_builder:
+    - /opt/java/openjdk                  # exactly what dev-toolchain COPYs from jdk-builder
+  env:
+    JAVA_HOME: /opt/java/openjdk
+    PATH: "/opt/java/openjdk/bin:${PATH}"
+  install_script: install.sh
+```
+
+The build pipeline (Story 13.4) renders this into the consumer's project-local `Dockerfile.devrail` automatically.
+
+#### Step 5: Initialize the plugin repo with DevRail standards
+
+A plugin repo is itself a DevRail-managed project. Adopt the standards so the plugin's own bash / YAML / docs lint cleanly:
+
+```sh
+gh repo create devrail-dev/devrail-plugin-<lang> --public --license MIT
+git clone git@github.com:devrail-dev/devrail-plugin-<lang>.git
+cd devrail-plugin-<lang>
+
+# Copy the reference Makefile + scaffolding
+cp /path/to/dev-toolchain/Makefile .
+cp /path/to/dev-toolchain/.gitignore .
+cp /path/to/dev-toolchain/.editorconfig .
+cp /path/to/dev-toolchain/.pre-commit-config.yaml .
+
+# Add a .devrail.yml that lints just bash (the install script)
+cat >.devrail.yml <<YAML
+languages:
+  - bash
+fail_fast: false
+log_format: json
+YAML
+
+make check    # confirms shellcheck/shfmt/trivy/gitleaks all clean
+```
+
+Then add `.github/workflows/ci.yml` that runs `make check` plus the manifest validator on every push (see the `devrail-plugin-kotlin` example — two jobs: `check` and `validate-manifest`).
+
+#### Step 6: Validate end-to-end
+
+Before tagging v1.0.0, exercise the plugin against a real consumer workspace via a `file://` URL:
+
+```sh
+# In a fresh test consumer
+cat >.devrail.yml <<YAML
+plugins:
+  - source: file:///home/you/devrail-plugin-<lang>
+    rev: v1.0.0       # the tag you're about to cut
+    languages: [<lang>]
+YAML
+
+# (Optional but recommended) tag locally first
+cd /home/you/devrail-plugin-<lang>
+git tag -a v1.0.0 -m "v1.0.0 — initial release"
+cd -
+
+make plugins-update    # resolver fetches via file:// and writes .devrail.lock
+make check             # builds devrail-local:<hash>, runs the plugin's targets
+```
+
+If the build succeeds and `make check` reports the plugin in `ran_languages`, the extraction is structurally complete.
+
+For automated regression coverage, add a manifest-shape smoke test to `dev-toolchain/tests/` mirroring `tests/test-kotlin-plugin-extraction.sh` — it validates the plugin's manifest, fetches it via the resolver, and asserts the loader cache matches the in-core behaviour. Vendor the plugin's manifest into `dev-toolchain/tests/fixtures/<lang>-via-plugin/` to keep the test hermetic.
+
+#### Step 7: Tag and announce
+
+```sh
+cd /path/to/devrail-plugin-<lang>
+git tag -a v1.0.0 -m "v1.0.0 — initial release"
+git push origin v1.0.0
+```
+
+Then update `dev-toolchain/CHANGELOG.md` with a note about the new reference plugin (no code change in dev-toolchain proper — the language stays in core for back-compat through v1.x). Cut a minor release on dev-toolchain to advertise the plugin's availability.
+
+#### Anti-patterns
+
+- **Don't remove the language from dev-toolchain core.** That's v2.0.0 / Story 13.9. Until then, the extraction is additive.
+- **Don't depend on `lib/log.sh` from the plugin's `install.sh`.** Self-contained scripts only.
+- **Don't introduce a new manifest field to handle "two tools per target".** Document the `&&` chaining workaround instead.
+- **Don't skip the manifest-shape smoke test in dev-toolchain.** It's how we catch drift between the plugin and the in-core behaviour.
+
 ### Plugin checklist
 
 Before publishing a `v1.0.0` release of your plugin:
@@ -658,7 +804,8 @@ Before publishing a `v1.0.0` release of your plugin:
 - [ ] At least one `targets.<name>.cmd` is defined
 - [ ] Each `cmd` that uses `{paths}` declares `paths_var` and `paths_default`
 - [ ] `gates:` are workspace-relative (no absolute paths)
-- [ ] `container.install_script` (if used) is idempotent and uses `set -euo pipefail`
+- [ ] `container.install_script` (if used) is idempotent, uses `set -euo pipefail`, and does NOT depend on `lib/log.sh` from dev-toolchain
 - [ ] Plugin tested locally against a consumer workspace via `file://` URL
 - [ ] First tag is an annotated semver tag (`git tag -a v1.0.0`); not a branch ref
 - [ ] README documents which `.devrail.yml` `languages:` entries the plugin provides
+- [ ] Plugin repo itself passes `make check` (DevRail-standard scaffolding adopted)
