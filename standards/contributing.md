@@ -505,7 +505,7 @@ DevRail plugins extend the dev-toolchain image with new languages or tool integr
 
 If you have a tool you want every DevRail-managed project to use, you can ship it as a plugin instead of opening a PR against the core dev-toolchain. This section walks through the contributor surface.
 
-> **See also:** [Plugin architecture design doc](https://github.com/devrail-dev/dev-toolchain/blob/main/docs/plugin-architecture.md) for the full rationale and lifecycle. [`devrail-yml-schema.md` § `plugins:`](devrail-yml-schema.md#plugins) for the consumer-side declaration shape.
+> **See also:** [Plugin architecture design doc](https://github.com/devrail-dev/devrail-standards/blob/main/_bmad-output/planning-artifacts/plugin-architecture-design.md) for the full rationale and lifecycle. [`devrail-yml-schema.md` § `plugins:`](devrail-yml-schema.md#plugins) for the consumer-side declaration shape.
 
 ### Plugin layout
 
