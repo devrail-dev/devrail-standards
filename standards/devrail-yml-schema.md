@@ -84,6 +84,67 @@ Can also be overridden at runtime via the `DEVRAIL_LOG_FORMAT=human` environment
 log_format: json
 ```
 
+### `env`
+
+**Type:** mapping of string to string (optional)
+
+**Default:** `{}` (empty)
+
+**Description:** Extra environment variables passed into the toolchain container. Each `KEY: value` pair is injected as `-e KEY=value` on the `docker run` invocation (the Makefile's `DEVRAIL_ENV_FLAGS`). Useful for tools and test suites that read configuration from the environment (e.g. a Rails test database host).
+
+**Validation rules:**
+
+- Must be a mapping; keys and values are treated as strings
+- Empty or omitted is a no-op
+
+**Example:**
+
+```yaml
+env:
+  RAILS_ENV: test
+  DATABASE_HOST: myapp-pg
+```
+
+### `docker_network`
+
+**Type:** string (optional)
+
+**Default:** `""` (none)
+
+**Description:** Attaches the toolchain container to an existing user-defined Docker network (`--network <name>`) so it can reach sibling service containers by hostname — the common pattern for running `make test` against a database in a separate container (e.g. a Postgres reachable at `myapp-pg`). A single network name; `docker run` honors only one `--network` at launch.
+
+**Validation rules:**
+
+- Must be a string naming a Docker network that already exists on the host
+- Empty or omitted is a no-op (no `--network` flag is added)
+
+**Example:**
+
+```yaml
+docker_network: myapp-test
+```
+
+### `docker_volumes`
+
+**Type:** list of strings (optional)
+
+**Default:** `[]` (empty)
+
+**Description:** Additional volume mounts for the toolchain container. Each entry is passed verbatim as `-v <spec>` to `docker run`, accepting the full Docker volume syntax — `host:container`, `host:container:ro`, or `named-volume:container`. Useful for mounting fixture data or sharing a cache across runs. The repository root is always mounted at `/workspace` regardless of this key.
+
+**Validation rules:**
+
+- Must be a list of strings, each a valid `docker -v` spec
+- Empty or omitted is a no-op
+
+**Example:**
+
+```yaml
+docker_volumes:
+  - ./fixtures:/workspace/fixtures
+  - shared-cache:/cache
+```
+
 ### `plugins`
 
 **Type:** list of mappings (optional)
@@ -274,7 +335,8 @@ terraform:
 
 ### Single-Language Project (Ruby on Rails)
 
-A Rails project using Ruby defaults:
+A Rails project using Ruby defaults, whose `rspec` suite talks to a Postgres
+running in a sibling container on a user-defined network:
 
 ```yaml
 # .devrail.yml — Ruby on Rails project
@@ -283,6 +345,12 @@ languages:
 
 fail_fast: false
 log_format: json
+
+# Reach the test database container by hostname and tell Rails where it is.
+docker_network: myapp-test
+env:
+  RAILS_ENV: test
+  DATABASE_HOST: myapp-pg
 
 ruby:
   linter:
