@@ -145,6 +145,39 @@ docker_volumes:
   - shared-cache:/cache
 ```
 
+### `projects`
+
+**Type:** list of mappings (optional)
+
+**Default:** `[]` (empty — autodetection applies)
+
+**Description:** Overrides autodetection of per-language project roots in a monorepo. Without this key, `make lint`/`format`/`fix`/`test`/`security` autodetect each declared language's project directory from its manifest file (`pyproject.toml`/`setup.py`/`setup.cfg` for Python, `package.json` for JavaScript/TypeScript) and run that language's tools with cwd set there, so local config (`tsconfig.json`, `vite.config.ts` path aliases, `pyproject.toml`) resolves correctly. A manifest at the repository root is treated as the common single-project case (root resolves to `.`, matching pre-monorepo-support behavior exactly); when no manifest exists anywhere, tools fall back to running from the repository root, same as before this feature existed. Set `projects:` only for layouts autodetection can't infer.
+
+**Entry shape:** Each entry is a mapping with these keys:
+
+- **`path`** (string, required) — the project's root directory, relative to the repository root.
+- **`languages`** (list of strings, required) — which `languages:` entries this project supplies tools for.
+
+**Validation rules:**
+
+- `path` must be a string naming a directory that exists in the repository
+- `languages` must be a non-empty list of strings drawn from the declared `languages:` list
+- Currently honored for `python` and `javascript` only (Go/Rust/Ansible autodetection is tracked as follow-on work)
+
+**Example:**
+
+```yaml
+languages:
+  - python
+  - javascript
+
+projects:
+  - path: api
+    languages: [python]
+  - path: frontend
+    languages: [javascript]
+```
+
 ### `plugins`
 
 **Type:** list of mappings (optional)
@@ -532,4 +565,5 @@ All tools consuming `.devrail.yml` follow standard DevRail exit codes:
 | `languages` | list of strings | Yes | -- | Languages used in the project |
 | `fail_fast` | boolean | No | `false` | Stop on first failure |
 | `log_format` | string | No | `json` | Output format (`json` or `human`) |
+| `projects` | list of mappings | No | `[]` | Override autodetected per-language project roots (Python/JS monorepos) |
 | `<language>` | mapping | No | -- | Per-language tool overrides |
