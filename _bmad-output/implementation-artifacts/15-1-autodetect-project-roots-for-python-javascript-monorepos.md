@@ -199,14 +199,14 @@ Claude Sonnet 5 — single-session execution via BMad Master direct authoring (n
 
 **Implementation (dev-toolchain repo, branch `feat/53-monorepo-project-root-discovery`):**
 
-- `lib/project-discover.sh` — new
+- `lib/project-discover.sh` — new (post-review: added a `[[ -d ... ]]` existence warning for `projects:` override paths — code-review finding)
 - `Makefile` — modified (`_lint`, `_format`, `_fix`, `_test`, `_security`: sourced the new lib; replaced the `HAS_PYTHON`/`HAS_JAVASCRIPT` blocks with per-root loops)
-- `tests/test-project-discover.sh` — new
+- `tests/test-project-discover.sh` — new (post-review: rewritten to copy fixtures into a `mktemp`-based `$WORKDIR` with a cleanup trap — matching `tests/test-plugin-loader.sh` — instead of bind-mounting checked-in fixtures directly; original version leaked a Docker bind-mount artifact into `tests/fixtures/`. Also extended with `_format`/`_fix`/`_security` integration coverage, previously only manually spot-checked — code-review findings)
 - `tests/fixtures/single-root-python/**` — new
 - `tests/fixtures/monorepo-python-js/**` — new
 - `tests/fixtures/multi-root-python/**` — new
 - `tests/fixtures/monorepo-with-override/**` — new
-- `tests/fixtures/declared-lang-no-manifest/**` — new
+- `tests/fixtures/declared-lang-no-manifest/**` — new (post-review: removed `script.py` — the fixture's own task description said "ships zero .py/manifest files" but a stray `.py` file had been included — code-review finding)
 - `.github/workflows/ci.yml` — modified (new "Project-root discovery smoke test" step)
 - `CHANGELOG.md` — modified (`[Unreleased] → Added` entry)
 - `STABILITY.md` — modified (new component row)
@@ -215,8 +215,9 @@ Claude Sonnet 5 — single-session execution via BMad Master direct authoring (n
 
 - `_bmad-output/planning-artifacts/epics.md` — modified (Epic 15 added, branch `feat/15-1-create-story`, already committed)
 - `_bmad-output/implementation-artifacts/sprint-status.yaml` — modified (branch `feat/15-1-create-story`, already committed; will need a further update to `15-1: review` — see Change Log)
-- `_bmad-output/implementation-artifacts/15-1-autodetect-project-roots-for-python-javascript-monorepos.md` — this file (status, all task checkboxes, AC 5 revision, Dev Agent Record, File List)
-- `standards/devrail-yml-schema.md` — modified (`projects:` key documented — new to this commit, not yet staged to the `feat/15-1-create-story` branch)
+- `_bmad-output/implementation-artifacts/15-1-autodetect-project-roots-for-python-javascript-monorepos.md` — this file (status, all task checkboxes, AC 5 revision, Dev Agent Record, File List, Senior Developer Review)
+- `standards/devrail-yml-schema.md` — modified (`projects:` key documented; updated again post-review to soften overclaimed validation rules and add the "root wins" limitation note)
+- `standards/makefile-contract.md` — modified (post-review: `projects:` subsection + Supported Keys row — flagged as a doc gap by code-review, CLAUDE.md rule 8)
 
 ## Change Log
 
@@ -224,3 +225,47 @@ Claude Sonnet 5 — single-session execution via BMad Master direct authoring (n
 |---|---|
 | 2026-07-24 | Story created via BMad Master direct authoring (status: ready-for-dev), following user decision to formalize GitHub issues #52/#53 into a proper epic before implementation |
 | 2026-07-24 | Implementation completed via BMad Master direct authoring (not a separate dev-story session); AC 5 revised (fallback-to-`.` instead of skip-and-warn) after discovering the original draft would have regressed bare-manifest-less Python projects; status moved to `review`; committed locally to `feat/53-monorepo-project-root-discovery` in dev-toolchain, not yet pushed or opened as a PR pending user confirmation |
+| 2026-07-24 | Ran the `dev-story` workflow's completion sequence (step 9) formally against the already-implemented story: task_check found zero incomplete tasks, so per the workflow's own logic execution skipped straight to the completion/DoD gate. Re-ran the full regression suite against the committed state (fast Docker overlay of `ghcr.io/devrail-dev/dev-toolchain:1.12.0` + this branch's `lib/`): `shellcheck`/`shfmt` clean, `tests/test-project-discover.sh` 11/11, `tests/test-plugin-loader.sh` all pass (confirms the new `lib/project-discover.sh` source line added to every recipe didn't regress the plugin loader prelude), `tests/smoke-rails.sh` all pass (confirms untouched-language recipe flow, e.g. Ruby's unqualified `"languages":["ruby"]` tag, is unaffected). DoD checklist confirmed: all tasks `[x]`, File List complete, Dev Agent Record present, Change Log present, only permitted story sections modified. Status remains `review` (already at target state — no `in-progress` transition needed). Next: `code-review` workflow. |
+| 2026-07-24 | `code-review` workflow executed (adversarial pass). 5 findings (1 HIGH, 2 MEDIUM, 2 LOW); all addressed in-session (no separate follow-up PR — see Senior Developer Review below for detail). Regression suite re-run post-fix: 20/20 (up from 11, the new format/fix/security integration cases). Outcome: Approve. |
+
+## Senior Developer Review (AI)
+
+**Reviewer:** Matthew (review executed by Claude Sonnet 5 — same model that implemented the story; see caveat below)
+**Date:** 2026-07-24
+**Outcome:** Approve (after in-session fixes; no separate follow-up PR needed)
+
+### Caveat
+
+Per the `dev-story`/`code-review` workflow's recommendation, code review should run under a **different** LLM than the one that implemented the story. This review was conducted under Sonnet 5, the same model/session that wrote the original implementation. Findings should be treated as a rigorous adversarial self-audit rather than a true second-pair-of-eyes review — the workflow's explicit minimum-3-issues mandate and git-vs-story cross-referencing forced genuine re-examination beyond what a casual self-check would surface, and did in fact catch a real regression risk (H1) and a real Docker-mount bug in the test harness that a "looks good" pass would have missed. A future review under a different model family remains worthwhile.
+
+### Findings
+
+**HIGH severity:**
+
+- [x] **H1** — `_project_discover_normalize`'s "root wins" rule (a manifest at `.` suppresses all nested manifests, collapsing discovery to `.`) silently defeats monorepo detection for a common real-world layout: a root-level `pyproject.toml` holding only shared tool config (e.g. `[tool.ruff]`) alongside genuine per-language subdirectories. No AC, fixture, or test covers this case, and the code comments only frame it as an optimization ("avoid double-running"), not as a real limitation users could hit. **Fix:** did not redesign the algorithm under review-time pressure (the `projects:` override already provides a correct, low-risk escape hatch for exactly this layout). Instead documented the limitation explicitly in `standards/devrail-yml-schema.md` with the concrete workaround, so a user hitting it isn't stuck or confused — [`devrail-yml-schema.md#projects`](../../standards/devrail-yml-schema.md), "Known autodetection limitation" paragraph.
+
+**MEDIUM severity:**
+
+- [x] **M1** — The committed `tests/test-project-discover.sh` only integration-tested `make _lint` and `make _test`, despite AC 1 explicitly listing `lint`/`format`/`fix`/`test`/`security` as in scope. `_format`/`_fix`/`_security`'s per-root cwd/tagging behavior had only been verified manually, ad hoc, during the session — not captured in the automated (CI-run) regression suite. **Fix:** added real integration assertions for all three remaining targets against both the monorepo fixture (qualified tags: `["python:api","javascript:frontend"]`, and `_security`'s per-root failed/skipped tagging: `["python:api:bandit"]` / `["javascript:frontend"]`) and the single-root fixture (unqualified tags, AC 4). Test count went from 11 to 20, all passing.
+- [x] **M2** — `standards/devrail-yml-schema.md`'s new `projects:` section stated "Validation rules" (`path` must exist as a directory; `languages` must be a non-empty list drawn from declared `languages:`) that **no code anywhere enforces** — unlike `plugins:`, which has a real schema validator (`scripts/plugin-validator.sh`). A misconfigured `projects:` entry is silently ignored or fails opaquely deep inside a `cd` rather than being caught with a clear error, contradicting what the doc promised. **Fix:** added a real (lightweight) runtime check — `discover_project_roots` now `log_warn`s when an override path doesn't exist as a directory — and reworded the doc's "Validation rules" to accurately describe current behavior (warn-not-reject for path existence; `languages` still unenforced) rather than overclaiming.
+
+**LOW severity:**
+
+- [x] **L1** — Task 4.6 committed `tests/fixtures/declared-lang-no-manifest/script.py`, but the task's own description says the fixture "ships zero `.py`/manifest files." The discrepancy didn't affect test correctness (`discover_project_roots` only cares about manifest absence, not `.py` file absence) but the fixture didn't match its documented intent. **Fix:** removed `script.py`; the fixture now contains only `.devrail.yml`.
+- [x] **L2** — CLAUDE.md critical rule 8 ("update documentation when changing behavior... in the same commit") was only partially honored: `standards/devrail-yml-schema.md` was updated, but `standards/makefile-contract.md` — the standards doc that actually describes the Makefile's execution model (cwd, target behavior) — said nothing about the new per-project cwd behavior, even though this is a direct, material change to how the documented "two-layer delegation" contract runs tools. **Fix:** added a `### projects` subsection (mirroring the existing `languages`/`fail_fast`/`log_format` entries) and a `Supported Keys` table row, cross-referencing the schema doc for full detail.
+
+### Discrepancy check (git vs. story File List)
+
+No discrepancies — every file touched (implementation + post-review fixes) is reflected in the File List above, and every File List entry has a corresponding change in `git diff main..feat/53-monorepo-project-root-discovery` (dev-toolchain) or the working tree (development-standards).
+
+### Action Items
+
+All 5 findings resolved in this session — no separate follow-up branch/PR (unlike Story 13.2's pattern, where fixes landed in a dedicated `fix/13-2-review-followups` PR after the original PR merged; here, nothing had been pushed/merged yet, so fixes were folded directly into the still-local `feat/53-monorepo-project-root-discovery` branch before it goes up for review).
+
+- [x] [AI-Review][HIGH] H1: document the "root wins" autodetection limitation and its `projects:` override workaround [`standards/devrail-yml-schema.md` → fixed]
+- [x] [AI-Review][MED] M1: add `_format`/`_fix`/`_security` integration test coverage [`tests/test-project-discover.sh` → fixed, 11 → 20 assertions]
+- [x] [AI-Review][MED] M2: enforce (warn on) `projects:` path existence at runtime; correct the doc's validation claims [`lib/project-discover.sh`, `standards/devrail-yml-schema.md` → fixed]
+- [x] [AI-Review][LOW] L1: remove stray `.py` file contradicting the fixture's documented intent [`tests/fixtures/declared-lang-no-manifest/script.py` → removed]
+- [x] [AI-Review][LOW] L2: document the new cwd-scoping behavior in the Makefile contract standards doc, not just the schema doc [`standards/makefile-contract.md` → fixed]
+
+**Bonus fix (not a scored finding, caught while verifying M1):** the original `tests/test-project-discover.sh` bind-mounted the checked-in `tests/fixtures/` directories directly as writable Docker workspaces. A Docker bind-mount behavior (mounting a file at a container path whose host-side directory is itself a live bind mount can materialize an empty placeholder file on the host) left stray root-owned `Makefile` files inside the tracked fixture directories after a local run. Rewritten to copy each fixture into a `mktemp`-based `$WORKDIR` with a cleanup trap before running any `make` target — matching the established `tests/test-plugin-loader.sh` convention, which this story's original test script should have followed from the start.

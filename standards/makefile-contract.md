@@ -328,6 +328,10 @@ When `true`, the Makefile stops at the first target failure instead of running a
 
 When set to `human`, targets produce human-readable table output instead of JSON. See [JSON Output Format](#json-output-format) for details.
 
+### `projects`
+
+For Python and JavaScript/TypeScript, `_lint`/`_format`/`_fix`/`_test`/`_security` no longer assume the repository root is the project root. Each language's tools run with cwd set to that language's discovered project directory — autodetected from its manifest file (`pyproject.toml`/`setup.py`/`setup.cfg` for Python, `package.json` for JS/TS), or overridden explicitly via `projects:`. A manifest at the repository root (the common case) still resolves to `.`, so single-project repos are unaffected. See [`devrail-yml-schema.md` § `projects`](devrail-yml-schema.md#projects) for the full override syntax and autodetection rules.
+
 ### Config Reading Pattern
 
 The Makefile reads `.devrail.yml` at startup. If the file is missing, the Makefile exits with code `2` (misconfiguration) for any target that requires language detection. The `help` and `install-hooks` targets work without `.devrail.yml`.
@@ -347,6 +351,7 @@ _check-config:
 | `languages` | Selects which tools run in `_lint`, `_format`, `_fix`, `_test`, `_security`, `_docs` |
 | `fail_fast` | Enables fail-fast error handling (overridden by `DEVRAIL_FAIL_FAST` env var) |
 | `log_format` | Switches output between JSON and human-readable (overridden by `DEVRAIL_LOG_FORMAT` env var) |
+| `projects` | Overrides per-language project-root autodetection (Python/JS) used by `_lint`/`_format`/`_fix`/`_test`/`_security` for cwd resolution |
 | `<language>` overrides | Customizes tool selection for a specific language |
 
 For the complete `.devrail.yml` schema, see [`devrail-yml-schema.md`](devrail-yml-schema.md).
