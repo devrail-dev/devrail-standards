@@ -1099,3 +1099,73 @@ Add `cosign`-style signature verification for plugin release tags. Opt-in via `p
 
 **Phase:** post-v2.0.0 / open-question follow-up
 **Depends on:** 13.9
+
+## Epic 15: Monorepo & Dependency-Aware Test Execution
+
+**Status:** in-progress
+**Phase:** Post-MVP — closes gaps reported in dev-toolchain issues [#52](https://github.com/devrail-dev/dev-toolchain/issues/52) and [#53](https://github.com/devrail-dev/dev-toolchain/issues/53)
+
+**Epic Goal:** Let `make lint`/`make test`/etc. work correctly against real, dependency-bearing, multi-directory projects — not just single-language repos with all files at root and stdlib-only test suites.
+
+**Background:** Two related gaps, both filed against dev-toolchain, both undermining the "one container, one `make check`" promise for real applications:
+- Issue #53: tools always run from the repo root, so a monorepo (e.g. `api/` Python + `frontend/` JS/TS) never finds its per-project config (`vite.config.ts` aliases, `frontend/tsconfig.json`, `api/pyproject.toml`).
+- Issue #52: `make test` never installs a project's own dependencies, so `pytest`/`vitest` fail at import time for any project beyond stdlib-only code.
+
+They compose: dependency install needs to happen *in* each project's root, so root discovery is the foundation. Story order: 15.1 (root discovery) → 15.2 (dependency install, built on top).
+
+**Scope for 15.1/15.2:** Python and JavaScript/TypeScript only — the exact reproduction case in both issues, and the only two ecosystems in the container that need an explicit pre-test install step (Go/Rust resolve modules/crates automatically during `test`/`build`). Go/Rust/Ansible root-awareness and `test.services` (ephemeral DB/cache containers for integration tests) are captured as follow-on backlog stories rather than folded in here, matching how Epic 13 phased its plugin rollout.
+
+**Architecture note:** per the plugin loader precedent (`dispatch_plugin_target`, a sourced `lib/*.sh` helper invoked once per recipe), new cross-cutting logic here must NOT become an 11th copy-pasted `if HAS_<LANG>` block. It lives in sourced `lib/` helpers.
+
+### Story 15.1: Autodetect Project Roots for Python & JavaScript Monorepos
+
+As a developer with a Python+JS monorepo (e.g. `api/` + `frontend/`), I want DevRail to discover each language's project root from its manifest file and run that language's tools with cwd set there, so that local config (tsconfig, vite aliases, pyproject.toml) resolves correctly without me restructuring my repo.
+
+**Acceptance Criteria:**
+
+**Given** a repo with `api/pyproject.toml` and `frontend/package.json` (no manifests at repo root)
+**When** `make lint`, `make format`, `make fix`, `make test`, or `make security` runs with no `projects:` override in `.devrail.yml`
+**Then** DevRail discovers `api/` as the Python root (via `pyproject.toml`/`setup.py`/`setup.cfg`) and `frontend/` as the JS/TS root (via `package.json`)
+**And** each language's tools run with that directory as cwd (ruff/pytest/bandit from `api/`; eslint/tsc/prettier/vitest/npm audit from `frontend/`)
+**And** `frontend/tsconfig.json` and `vite.config.ts` path aliases resolve correctly, and `api/pyproject.toml` config is picked up by ruff/pytest
+**And** an explicit `projects:` list in `.devrail.yml` (`- path: api, languages: [python]` / `- path: frontend, languages: [javascript]`) overrides autodetection when present
+**And** a single-language repo with manifests at the root (the common case, e.g. this dev-toolchain repo itself) is unaffected — root resolves to `.` exactly as today
+**And** discovery logic lives in a new sourced `lib/project-discover.sh` helper (mirroring the `dispatch_plugin_target` pattern), not duplicated per `HAS_<LANG>` block
+**And** results are reported per project path so a failure identifies which project failed
+
+**Repos:** dev-toolchain, OrgDocs/development-standards (schema doc)
+**Follows on to:** Story 15.2 (dependency install runs in the roots this story discovers)
+
+### Story 15.2: Autodetect and Install Python/JS Dependencies Before `make test`
+
+As a developer with a dependency-bearing project, I want `make test` to install my project's dependencies before running pytest/vitest, so that tests don't fail at import time with `ModuleNotFoundError`/unresolved-import errors.
+
+**Acceptance Criteria:**
+
+**Given** a Python project root (from Story 15.1) containing `uv.lock` (or `poetry.lock`/`Pipfile.lock`/`requirements*.txt`/`pyproject.toml`, first match wins)
+**When** `make test` runs
+**Then** DevRail installs dependencies via the matching manager (`uv sync --frozen` / `poetry install` / `pipenv sync` / `pip install -r <file>` / `pip install -e .`) before `pytest` runs, from that project's root
+**Given** a JS/TS project root containing `package-lock.json` (or `pnpm-lock.yaml`/`yarn.lock`, first match wins)
+**When** `make test` runs
+**Then** DevRail installs dependencies via the matching manager (`npm ci` / `pnpm install --frozen-lockfile` / `yarn install --frozen-lockfile`) before `vitest` runs, from that project's root
+**And** `.devrail.yml` `test.install` overrides the autodetected install command
+**And** `.devrail.yml` `test.setup` runs after install, before the test suite (e.g. migrations)
+**And** all installs happen inside the container; nothing leaks to the host beyond the project's own dependency directories (`node_modules/`, project venv, etc.) under the bind-mounted workspace
+**And** a project with no lockfile/manifest (stdlib-only) is unaffected — no install step runs, behavior unchanged from today
+
+**Repos:** dev-toolchain, OrgDocs/development-standards (schema doc)
+**Depends on:** 15.1
+
+### Story 15.3: Extend Project-Root Discovery to Go, Rust, and Ansible (Backlog)
+
+**Status (placeholder):**
+Generalize `lib/project-discover.sh` to the remaining root-signal languages from issue #53's proposal (`go.mod`, `Cargo.toml`, `ansible.cfg`/playbook dir). Lower priority than 15.1/15.2 — Go and Rust already resolve fine from repo root in the common case since `go test ./...` and `cargo test` recurse, and Ansible's root signal is fuzzier than a single manifest file.
+
+**Depends on:** 15.1
+
+### Story 15.4: `test.services` — Ephemeral Service Containers for Integration Tests (Backlog)
+
+**Status (placeholder):**
+Support `.devrail.yml` `test.services: [postgres:16, redis:7]` — DevRail starts throwaway containers on the test network and injects standard env (`DATABASE_URL`, `REDIS_URL`). Optionally autodetect from `docker-compose.test.yml`. Deferred from issue #52's proposal as a distinct, larger piece of work (container orchestration, not just dependency install).
+
+**Depends on:** 15.2
