@@ -1156,10 +1156,11 @@ As a developer with a dependency-bearing project, I want `make test` to install 
 **Repos:** dev-toolchain, OrgDocs/development-standards (schema doc)
 **Depends on:** 15.1
 
-### Story 15.3: Extend Project-Root Discovery to Go, Rust, and Ansible (Backlog)
+### Story 15.3: Extend Project-Root Discovery to Go and Rust
 
-**Status (placeholder):**
-Generalize `lib/project-discover.sh` to the remaining root-signal languages from issue #53's proposal (`go.mod`, `Cargo.toml`, `ansible.cfg`/playbook dir). Lower priority than 15.1/15.2 — Go and Rust already resolve fine from repo root in the common case since `go test ./...` and `cargo test` recurse, and Ansible's root signal is fuzzier than a single manifest file.
+**Status:** ready-for-dev — see `_bmad-output/implementation-artifacts/15-3-extend-project-root-discovery-to-go-rust-and-ansible.md`
+
+**Corrected during story creation (2026-07-26):** this epic's original draft claimed Go/Rust "already resolve fine from repo root" (lower priority) and that Ansible needed root-discovery logic too. Both were checked by hand and found backwards: `go test ./...`, `golangci-lint run ./...`, `cargo test`, `cargo clippy`, and `cargo fmt --check` all genuinely fail against a real fixture with `go.mod`/`Cargo.toml` in a subdirectory — this is an unfixed instance of issue #53, not a non-issue. `ansible-lint`, conversely, already recursively discovers playbooks correctly with no root marker needed — verified against a real fixture. Scope corrected to **Go and Rust only**, generalizing Story 15.1's existing `lib/project-discover.sh` (two new autodetect functions, no new library, no new dependency-install component — Go/Rust fetch their own deps automatically).
 
 **Depends on:** 15.1
 
