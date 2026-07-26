@@ -199,20 +199,22 @@ Claude Sonnet 5 — single-session execution via the formal `dev-story` workflow
 
 - `lib/project-discover.sh` — modified (two new autodetect functions, two new `case` branches, `target/` added to shared excludes, header comment updated)
 - `Makefile` — modified (`_lint`/`_format`/`_fix`/`_test`/`_security`: `HAS_GO`/`HAS_RUST` blocks wrapped in per-root loops, 10 call sites)
-- `tests/test-project-discover.sh` — modified (extended in place, +14 assertions)
+- `tests/test-project-discover.sh` — modified (extended in place, +14 assertions; +12 more post-review, see below)
 - `tests/fixtures/go-monorepo/**` — new
 - `tests/fixtures/go-single-root/**` — new
 - `tests/fixtures/rust-monorepo/**` — new
 - `tests/fixtures/rust-single-root/**` — new
+- `tests/fixtures/go-multi-root/**` — new (post-review: code-review finding M1, AC 7 was untested)
+- `tests/fixtures/rust-multi-root/**` — new (post-review: code-review finding M1)
 - `CHANGELOG.md` — modified (`[Unreleased] → Added` entry)
 - `STABILITY.md` — modified (extended Story 15.1's row rather than adding a new one)
 
 **Story tracking + schema docs (OrgDocs/development-standards repo, branch `feat/15-3-create-story`):**
 
-- `_bmad-output/implementation-artifacts/15-3-extend-project-root-discovery-to-go-rust-and-ansible.md` — this file (status, all task checkboxes, Dev Agent Record, File List)
-- `_bmad-output/implementation-artifacts/sprint-status.yaml` — will need a further update to `15-3: review`
+- `_bmad-output/implementation-artifacts/15-3-extend-project-root-discovery-to-go-rust-and-ansible.md` — this file (status, all task checkboxes, Dev Agent Record, File List, Senior Developer Review)
+- `_bmad-output/implementation-artifacts/sprint-status.yaml` — updated to `15-3: review`
 - `_bmad-output/planning-artifacts/epics.md` — already corrected during story creation
-- `standards/devrail-yml-schema.md` — modified (go/rust added to `projects:` documentation)
+- `standards/devrail-yml-schema.md` — modified (go/rust added to `projects:` documentation; post-review: `go.work` limitation note added — code-review finding L1)
 - `standards/makefile-contract.md` — modified (go/rust added to `### projects` entry)
 
 ## Change Log
@@ -221,3 +223,37 @@ Claude Sonnet 5 — single-session execution via the formal `dev-story` workflow
 |---|---|
 | 2026-07-26 | Story created via the formal `create-story` workflow (auto-discovered as the first `backlog` story). Investigated the epic draft's claims by hand before writing ACs: reproduced `go test ./...`/`golangci-lint`/`cargo test`/`cargo clippy`/`cargo fmt` all genuinely failing for a monorepo Go/Rust module not rooted at the repo root (epic draft was wrong — this is not low-priority, it's a real unfixed instance of issue #53), and reproduced `ansible-lint` already working correctly without any root-discovery changes (epic draft was also wrong here — Ansible is out of scope, not a follow-on). Scope corrected to Go + Rust only, framed as a generalization of Story 15.1's existing `lib/project-discover.sh` rather than new work. Status: `ready-for-dev`. |
 | 2026-07-26 | Ran the formal `dev-story` workflow end to end. Implementation matched the `create-story` design with no AC revisions needed — the up-front failure-reproduction investigation meant this story's design was already validated before implementation started, unlike Stories 15.1/15.2 where real bugs surfaced during testing. One test-harness-only false failure (missing `uv` in this session's overlay image, not a code issue) diagnosed and resolved. Full regression suite green (34/34 project-discover, 12/12 dependency-install, plugin-loader, smoke-rails all pass). Status moved to `review`. Committed locally to `feat/53-go-rust-project-root-discovery`; not pushed. |
+| 2026-07-26 | `code-review` workflow executed (adversarial pass). 3 findings (2 MEDIUM, 1 LOW); all addressed in-session. Regression suite re-run post-fix: 46/46 (up from 34, 12 new multi-root and format/fix/security assertions). Outcome: Approve. |
+
+## Senior Developer Review (AI)
+
+**Reviewer:** Matthew (review executed by Claude Sonnet 5 — same model that implemented the story; see caveat below)
+**Date:** 2026-07-26
+**Outcome:** Approve (after in-session fixes)
+
+### Caveat
+
+Same caveat as Stories 15.1/15.2's reviews: same model/session as the implementation, not a genuinely independent second pair of eyes. This story's implementation was unusually clean (no AC revisions, unlike 15.1/15.2) precisely because `create-story` front-loaded the verification work — which made the adversarial pass's job harder: there was no obviously-wrong design decision to catch. The review still found real gaps by applying the same lens Story 15.1's own review used on itself: check whether every AC's claim is actually backed by a committed, automated test, not just plausible from reading the code.
+
+### Findings
+
+**MEDIUM severity:**
+
+- [x] **M1** — AC 7 explicitly claims multi-root behavior ("a monorepo with multiple Go/Rust module roots... the tool runs once per discovered root, and results/failures are attributed per path"), but no fixture or test exercised this — only the single-nested-module case (`go-monorepo`/`rust-monorepo`, one module in `services/api/`) was covered. The underlying mechanism (`_project_discover_normalize`) is shared and already proven multi-root-capable for Python via Story 15.1's `multi-root-python` fixture, so this was very likely to work — but "very likely" isn't "tested," and AC 7 asserted it as a checked guarantee. **Fix:** added `tests/fixtures/go-multi-root/` and `tests/fixtures/rust-multi-root/` (two module roots each) and corresponding `make _test` integration assertions confirming both roots run and tag independently (`["go:services/a","go:services/b"]`).
+- [x] **M2** — The committed test suite only integration-tested `_lint`/`_test` for the Go/Rust monorepo fixtures, not `_format`/`_fix`/`_security` — the exact class of gap Story 15.1's own code review caught and fixed for itself (M1 in that story's review), reintroduced here in the very next story of the same epic despite the lesson being written down in this story's own Dev Notes ("Real bugs caught in prior stories' reviews, don't repeat them here"). **Fix:** added `_format`/`_fix`/`_security` assertions against `go-monorepo`/`rust-monorepo`, including verifying the per-root skip tag for Go (`govulncheck` skipped, no `go.sum`) and the per-root pass tag for Rust (`cargo audit` ran against the fixture's auto-generated `Cargo.lock`).
+
+**LOW severity:**
+
+- [x] **L1** — Neither the design phase nor the implementation considered `go.work` (Go's native multi-module workspace file, introduced in Go 1.18 — the officially-supported answer to exactly the "multiple Go modules in one repo" problem this story addresses via a different mechanism). Investigated during review: a `go.work`-based repo typically has no root-level `go.mod` (each workspace member has its own), so this story's autodetection still finds and correctly cwd's into each member — no functional conflict. What's undocumented is that workspace-level cross-module behavior (e.g. a `replace` directive that only resolves in `go.work` mode) is not preserved; each module is tested in isolation as if `go.work` didn't exist. Not a bug — a real, previously-unexamined edge case worth a paragraph so a Go-savvy user isn't surprised. **Fix:** added a "Go workspaces (`go.work`)" note to `standards/devrail-yml-schema.md`'s `projects:` section, alongside the existing "root wins" limitation note from Story 15.1's own review.
+
+### Discrepancy check (git vs. story File List)
+
+No discrepancies in the original implementation commit. Two new fixture directories (`go-multi-root/`, `rust-multi-root/`) and one further edit to `tests/test-project-discover.sh` from the review-fix pass are reflected in the updated File List below.
+
+### Action Items
+
+All 3 findings resolved in this session — folded into the still-local `feat/53-go-rust-project-root-discovery` branch, same pattern as Stories 15.1/15.2.
+
+- [x] [AI-Review][MED] M1: add multi-root Go/Rust fixtures + test coverage for AC 7's claim [`tests/fixtures/go-multi-root/`, `tests/fixtures/rust-multi-root/`, `tests/test-project-discover.sh` → fixed]
+- [x] [AI-Review][MED] M2: add `_format`/`_fix`/`_security` coverage for Go/Rust monorepo fixtures [`tests/test-project-discover.sh` → fixed]
+- [x] [AI-Review][LOW] L1: document the `go.work` interaction and its limitation [`standards/devrail-yml-schema.md` → fixed]

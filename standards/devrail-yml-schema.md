@@ -155,6 +155,8 @@ docker_volumes:
 
 **Known autodetection limitation:** autodetection treats a manifest at the repository root as authoritative and does not also descend into subdirectories — if your repo has a root-level `pyproject.toml` used only for shared tool config (a common pattern) alongside real per-language subdirectories, autodetection collapses to root-only and won't discover the subdirectories. Use an explicit `projects:` entry per subdirectory to get correct per-project execution in that layout.
 
+**Go workspaces (`go.work`):** autodetection looks for `go.mod` files and is unaware of `go.work` — Go's own native multi-module workspace mechanism. In practice this doesn't conflict: a `go.work`-based repo typically has no `go.mod` at the repository root (each workspace member has its own), so autodetection finds and runs each member module independently from its own directory, which is correct on its own terms. What it does **not** do is preserve any `go.work`-level behavior that spans modules (e.g. a `replace` directive resolved only in workspace mode) — each module is tested/linted in isolation, as if `go.work` didn't exist. If your workspace relies on cross-module resolution, either declare each member as an explicit `projects:` entry pointing at a wrapper command that runs `go build`/`go test` from the workspace root, or track this as a gap to revisit (not yet a dedicated story).
+
 **Entry shape:** Each entry is a mapping with these keys:
 
 - **`path`** (string, required) — the project's root directory, relative to the repository root.
