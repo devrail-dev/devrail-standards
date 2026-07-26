@@ -188,11 +188,16 @@ projects:
 
 **Description:** Controls dependency installation and setup for `make test`. Without this key, `make test` autodetects and installs each Python/JavaScript project's dependencies (from the roots discovered per the `projects` key above) before running `pytest`/`vitest`, so tests don't fail at import time with `ModuleNotFoundError`/unresolved-import errors.
 
-**Autodetection (Python):** first match wins — `uv.lock` present → `uv export --frozen --no-hashes --format requirements-txt | uv pip install --system --break-system-packages -r -`; else `requirements*.txt` present (sorted, first match) → `pip install --break-system-packages -r <file>`; else `pyproject.toml`/`setup.py` present → `pip install --break-system-packages -e .`; else no install runs.
+**Autodetection (Python):** first match wins — `uv.lock` present → `uv export --frozen --no-hashes --format requirements-txt | uv pip install --system --break-system-packages -r -`; else `requirements*.txt` present → `pip install --break-system-packages -r <file>` (plain `requirements.txt` wins if present, regardless of other `requirements-*.txt` variants; otherwise the alphabetically-first match); else `pyproject.toml`/`setup.py` present → `pip install --break-system-packages -e .`; else no install runs.
 
 **Autodetection (JavaScript/TypeScript):** `package-lock.json` present → `npm ci`; else no install runs.
 
 **Currently supported package managers:** `uv` and `pip` (Python), `npm` (JS/TS) only. `poetry`, `pipenv`, `pnpm`, and `yarn` are not installed in the container and their lockfiles are not autodetected — this is tracked as follow-on work (Story 15.3+), not a bug. Installs land in the container's system Python/Node environment, not an isolated per-project virtualenv — this container's tools (`pytest`, `ruff`, etc.) are themselves installed system-wide, so a project's own dependencies have to land in the same place to be visible to them.
+
+**Operational notes:**
+
+- **`make test` now requires network egress** (to PyPI and/or the npm registry) for any Python/JS project with a manifest — this is new as of this feature; previously `make test` had no network dependency. CI runners typically have this by default; air-gapped or network-restricted environments will need `test.install` pointed at a local/vendored install path, or a private package index configured via the usual `pip`/`npm` environment variables.
+- **The `pip install -e .` fallback** (no lockfile, no `requirements*.txt` — just a `pyproject.toml`/`setup.py`) leaves a `<package-name>.egg-info/` directory inside the project's own source tree as a normal editable-install side effect. It's harmless but will show up as an untracked directory in `git status` if you don't already `.gitignore` it.
 
 **Keys:**
 

@@ -48,7 +48,8 @@ so that tests don't fail at import time with `ModuleNotFoundError`/unresolved-im
 
 9. **Given** all installs run inside the container against the bind-mounted `/workspace`
    **When** `make test` completes
-   **Then** nothing is written to the host beyond the project's own dependency directories under the workspace (`.venv`/site-packages via `pip`/`uv`, `node_modules/` via `npm`) — no host-level state, matching the existing container isolation model
+   **Then** nothing is written to the host outside the project's own workspace directories — the container's **system** Python site-packages for `pip`/`uv` installs (revised along with AC 1: not an isolated `.venv`, which is never created), `node_modules/` under the project root for `npm` — no host-level state outside `/workspace`, matching the existing container isolation model
+   **And** the `pip install -e .` fallback path (no lockfile, no `requirements*.txt`) additionally leaves a `<package-name>.egg-info/` directory inside the project's own source tree — a normal `pip` editable-install side effect, not a bug, but worth knowing about if it shows up as an untracked directory in `git status`
 
 10. **Given** a passing test suite
     **When** `bash tests/test-dependency-install.sh` runs
@@ -288,3 +289,44 @@ Claude Sonnet 5 — single-session execution via the formal `dev-story` workflow
 |---|---|
 | 2026-07-25 | Story created via the formal `create-story` workflow (auto-discovered as the first `backlog` story in `sprint-status.yaml`), following exhaustive artifact analysis. Critical scope-narrowing finding during creation: the container image doesn't have `uv`/`poetry`/`pipenv`/`pnpm`/`yarn` installed — only `pip` and `npm`. Scoped to `uv`+`pip` (Python) and `npm` (JS), matching issue #52's literal reproduction case, with `poetry`/`pipenv`/`pnpm`/`yarn` explicitly deferred. Status: `ready-for-dev`. |
 | 2026-07-25 | Ran the formal `dev-story` workflow end to end (red-green-refactor per task, real fixtures, real network installs). Two real bugs found and fixed during implementation, not just at review: AC 1's `uv sync` targeted the wrong (isolated venv) environment and never actually worked with this container's globally-installed `pytest`; a `local rc=$?` placement bug meant every install failure was silently treated as success (AC 8 violation), caught only because AC 8 was tested with a dedicated failing-install fixture rather than assumed correct from reading the code. Full regression suite green (project-discover, plugin-loader, smoke-rails, plus the new 10-assertion dependency-install suite). Status moved to `review`. Committed locally to `feat/52-dependency-install-before-test`; not pushed. |
+| 2026-07-25 | `code-review` workflow executed (adversarial pass). 5 findings (1 HIGH, 2 MEDIUM, 2 LOW); all addressed in-session. Regression suite re-run post-fix: 12/12 (up from 10, two new coverage cases). Outcome: Approve. |
+
+## Senior Developer Review (AI)
+
+**Reviewer:** Matthew (review executed by Claude Sonnet 5 — same model that implemented the story; see caveat below)
+**Date:** 2026-07-25
+**Outcome:** Approve (after in-session fixes)
+
+### Caveat
+
+Same caveat as Story 15.1's review: this ran under the same model/session that implemented the story, not a genuinely independent reviewer. The workflow's minimum-3-issues mandate and explicit git-vs-story cross-referencing still forced real re-examination — this pass found a stale AC (contradicting its own sibling AC after a mid-implementation revision), an undocumented filesystem side effect, an undocumented new operational requirement, and an untested sort-order edge case that would have silently installed the wrong file for a common two-requirements-file layout.
+
+### Findings
+
+**HIGH severity:**
+
+- [x] **H1** — AC 9's text still described installs landing in `.venv`/site-packages, directly contradicting AC 1 as revised during implementation (which explicitly does **not** create a `.venv` — that was the whole bug). A reader hitting AC 9 after AC 1 would see two acceptance criteria disagreeing with each other in the same file. **Fix:** reworded AC 9 to match the corrected AC 1 (system site-packages, no venv) and added the `pip install -e .` → `.egg-info/` side effect it was otherwise silent about.
+
+**MEDIUM severity:**
+
+- [x] **M1** — `make test` now unconditionally requires network egress (PyPI/npm) for any Python/JS project with a manifest — a new operational requirement that did not exist before this story. This was noted only in `tests/test-dependency-install.sh`'s internal header comment, which no consumer will ever read; nothing in the user-facing `.devrail.yml` schema doc mentioned it. Air-gapped or network-restricted CI would see `make test` newly fail with no explanation pointing at the cause. **Fix:** added an "Operational notes" subsection to `standards/devrail-yml-schema.md`'s `test:` section covering both the network requirement and the `.egg-info/` side effect (the doc-side half of H1).
+- [x] **M2** — `_dependency_install_autodetect_python`'s `requirements*.txt` autodetection picked the alphabetically-first glob match. For the common layout of both `requirements.txt` and `requirements-dev.txt` in the same directory, alphabetical sort picks `requirements-dev.txt` (`-` sorts before `.` in ASCII) — silently installing the *dev* file instead of the base one a user would expect, with no fixture or test exercising this case to catch it. **Fix:** `requirements.txt` now wins outright when present, falling back to sorted-first only when no plain `requirements.txt` exists. Added `tests/fixtures/python-multi-requirements/` (a `requirements-dev.txt` naming a nonexistent package, so picking the wrong file would make the install fail) and a corresponding assertion — 10 → 12 in the regression suite.
+
+**LOW severity:**
+
+- [x] **L1** — The committed `tests/test-dependency-install.sh` exercised the Python side of AC 7's "no manifest, no install" regression case (via Story 15.1's `declared-lang-no-manifest`) but had no equivalent JS-side check — mirrors the exact class of gap Story 15.1's own review caught (missing target/language coverage in the committed suite, only verified manually in-session). **Fix:** added an assertion against Story 15.1's `monorepo-python-js` fixture (`frontend/` has `package.json` but no `package-lock.json`) — 12th assertion.
+- [x] **L2** — Minor: `install_project_deps`/`run_project_setup` each re-read `.devrail.yml` via a fresh `yq` subprocess on every call — once per (language, root) pair per `make test` invocation. For a monorepo with several roots this is a handful of extra `yq` invocations per run (each a few milliseconds), not a real performance problem at today's scale, but worth a code comment so it doesn't get "fixed" into premature caching later without someone first checking whether it's ever actually shown up as slow. Not fixed — noted here as an accepted, deliberately-unaddressed trade-off rather than left as a silent gap; caching would add real complexity (invalidation, staleness) for a cost that hasn't been shown to matter.
+
+### Discrepancy check (git vs. story File List)
+
+No discrepancies — `git diff feat/53-monorepo-project-root-discovery..feat/52-dependency-install-before-test --stat` matches the File List exactly (30 files, matching insertions), and the two post-review fixes (`lib/dependency-install.sh`, `tests/test-dependency-install.sh` modified; `tests/fixtures/python-multi-requirements/` added) are reflected below.
+
+### Action Items
+
+All 5 findings resolved in this session — folded directly into the still-local `feat/52-dependency-install-before-test` branch (nothing pushed/merged yet), same pattern as Story 15.1's review.
+
+- [x] [AI-Review][HIGH] H1: reconcile AC 9 with AC 1's revised (no-venv) install target; document the `.egg-info/` side effect [story file `#Acceptance Criteria` → fixed]
+- [x] [AI-Review][MED] M1: document the new network-egress requirement and `.egg-info/` side effect in the schema doc [`standards/devrail-yml-schema.md` → fixed]
+- [x] [AI-Review][MED] M2: fix `requirements.txt` vs `requirements-dev.txt` precedence; add regression coverage [`lib/dependency-install.sh`, `tests/fixtures/python-multi-requirements/`, `tests/test-dependency-install.sh` → fixed]
+- [x] [AI-Review][LOW] L1: add JS-side AC 7 regression coverage [`tests/test-dependency-install.sh` → fixed]
+- [x] [AI-Review][LOW] L2: document the repeated-`yq`-read trade-off rather than silently leaving it unexplained [`lib/dependency-install.sh` → comment added]
