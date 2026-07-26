@@ -151,7 +151,7 @@ docker_volumes:
 
 **Default:** `[]` (empty — autodetection applies)
 
-**Description:** Overrides autodetection of per-language project roots in a monorepo. Without this key, `make lint`/`format`/`fix`/`test`/`security` autodetect each declared language's project directory from its manifest file (`pyproject.toml`/`setup.py`/`setup.cfg` for Python, `package.json` for JavaScript/TypeScript) and run that language's tools with cwd set there, so local config (`tsconfig.json`, `vite.config.ts` path aliases, `pyproject.toml`) resolves correctly. A manifest at the repository root is treated as the common single-project case (root resolves to `.`, matching pre-monorepo-support behavior exactly); when no manifest exists anywhere, tools fall back to running from the repository root, same as before this feature existed. Set `projects:` only for layouts autodetection can't infer.
+**Description:** Overrides autodetection of per-language project roots in a monorepo. Without this key, `make lint`/`format`/`fix`/`test`/`security` autodetect each declared language's project directory from its manifest file (`pyproject.toml`/`setup.py`/`setup.cfg` for Python, `package.json` for JavaScript/TypeScript, `go.mod` for Go, `Cargo.toml` for Rust) and run that language's tools with cwd set there, so local config (`tsconfig.json`, `vite.config.ts` path aliases, `pyproject.toml`) resolves correctly — and, for Go/Rust, so `go test`/`golangci-lint`/`cargo test`/`cargo clippy`/`cargo fmt` don't fail outright with "directory prefix . does not contain main module" / "could not find Cargo.toml" errors when the module isn't rooted at the repo root. A manifest at the repository root is treated as the common single-project case (root resolves to `.`, matching pre-monorepo-support behavior exactly); when no manifest exists anywhere, tools fall back to running from the repository root, same as before this feature existed. Set `projects:` only for layouts autodetection can't infer.
 
 **Known autodetection limitation:** autodetection treats a manifest at the repository root as authoritative and does not also descend into subdirectories — if your repo has a root-level `pyproject.toml` used only for shared tool config (a common pattern) alongside real per-language subdirectories, autodetection collapses to root-only and won't discover the subdirectories. Use an explicit `projects:` entry per subdirectory to get correct per-project execution in that layout.
 
@@ -164,7 +164,7 @@ docker_volumes:
 
 - `path` should name a directory that exists in the repository — a non-existent path logs a warning at runtime but is not rejected outright (unlike `plugins:`, `projects:` has no dedicated schema validator yet)
 - `languages` should be a non-empty list of strings drawn from the declared `languages:` list — this is not currently enforced; an unrecognized or mismatched entry is silently ignored rather than erroring
-- Currently honored for `python` and `javascript` only (Go/Rust/Ansible autodetection is tracked as follow-on work)
+- Honored for `python`, `javascript`, `go`, and `rust`. Ansible needs no equivalent — `ansible-lint` already recursively discovers playbooks from cwd regardless of where they live in the repo, with no root-marker file the way `go.mod`/`Cargo.toml` are for their toolchains.
 
 **Example:**
 

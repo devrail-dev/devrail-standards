@@ -152,6 +152,6 @@ development_status:
   epic-15: in-progress
   15-1-autodetect-project-roots-for-python-javascript-monorepos: review
   15-2-autodetect-and-install-python-js-dependencies-before-make-test: review
-  15-3-extend-project-root-discovery-to-go-rust-and-ansible: ready-for-dev
+  15-3-extend-project-root-discovery-to-go-rust-and-ansible: review
   15-4-test-services-ephemeral-service-containers: backlog
   epic-15-retrospective: optional

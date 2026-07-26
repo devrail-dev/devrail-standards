@@ -330,7 +330,7 @@ When set to `human`, targets produce human-readable table output instead of JSON
 
 ### `projects`
 
-For Python and JavaScript/TypeScript, `_lint`/`_format`/`_fix`/`_test`/`_security` no longer assume the repository root is the project root. Each language's tools run with cwd set to that language's discovered project directory — autodetected from its manifest file (`pyproject.toml`/`setup.py`/`setup.cfg` for Python, `package.json` for JS/TS), or overridden explicitly via `projects:`. A manifest at the repository root (the common case) still resolves to `.`, so single-project repos are unaffected. See [`devrail-yml-schema.md` § `projects`](devrail-yml-schema.md#projects) for the full override syntax and autodetection rules.
+For Python, JavaScript/TypeScript, Go, and Rust, `_lint`/`_format`/`_fix`/`_test`/`_security` no longer assume the repository root is the project root. Each language's tools run with cwd set to that language's discovered project directory — autodetected from its manifest file (`pyproject.toml`/`setup.py`/`setup.cfg` for Python, `package.json` for JS/TS, `go.mod` for Go, `Cargo.toml` for Rust), or overridden explicitly via `projects:`. A manifest at the repository root (the common case) still resolves to `.`, so single-project repos are unaffected. Ansible needs no equivalent — `ansible-lint` already discovers playbooks recursively regardless of cwd. See [`devrail-yml-schema.md` § `projects`](devrail-yml-schema.md#projects) for the full override syntax and autodetection rules.
 
 ### `test`
 
