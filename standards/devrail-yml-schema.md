@@ -180,6 +180,42 @@ projects:
     languages: [javascript]
 ```
 
+### `test`
+
+**Type:** mapping (optional)
+
+**Default:** `{}` (empty — autodetection applies)
+
+**Description:** Controls dependency installation and setup for `make test`. Without this key, `make test` autodetects and installs each Python/JavaScript project's dependencies (from the roots discovered per the `projects` key above) before running `pytest`/`vitest`, so tests don't fail at import time with `ModuleNotFoundError`/unresolved-import errors.
+
+**Autodetection (Python):** first match wins — `uv.lock` present → `uv export --frozen --no-hashes --format requirements-txt | uv pip install --system --break-system-packages -r -`; else `requirements*.txt` present (sorted, first match) → `pip install --break-system-packages -r <file>`; else `pyproject.toml`/`setup.py` present → `pip install --break-system-packages -e .`; else no install runs.
+
+**Autodetection (JavaScript/TypeScript):** `package-lock.json` present → `npm ci`; else no install runs.
+
+**Currently supported package managers:** `uv` and `pip` (Python), `npm` (JS/TS) only. `poetry`, `pipenv`, `pnpm`, and `yarn` are not installed in the container and their lockfiles are not autodetected — this is tracked as follow-on work (Story 15.3+), not a bug. Installs land in the container's system Python/Node environment, not an isolated per-project virtualenv — this container's tools (`pytest`, `ruff`, etc.) are themselves installed system-wide, so a project's own dependencies have to land in the same place to be visible to them.
+
+**Keys:**
+
+- **`install`** (string, optional) — a shell command that replaces autodetection entirely for every discovered project root of every declared language. Use this when autodetection can't infer your setup (e.g. a `poetry.lock`-based project, or an install step with extra flags).
+- **`setup`** (string, optional) — a shell command that runs after a successful install and before the test suite, for every discovered project root of every declared language (e.g. database migrations). No-op if absent.
+- **`services`** — **not implemented.** Ephemeral service containers (e.g. `services: [postgres:16, redis:7]`) for integration tests are a separate, larger piece of work tracked as a follow-up story. Do not add this key expecting it to do anything yet.
+
+**Validation rules:**
+
+- `install` and `setup` should be valid shell command strings — neither is currently schema-validated; a malformed command simply fails at `make test` runtime with a normal shell error, the same as any other misconfigured `.devrail.yml` string value
+- A failed install or setup step fails `make test` immediately for that project root — the test suite does not run against a broken/partial install
+
+**Example:**
+
+```yaml
+languages:
+  - python
+
+test:
+  install: "poetry install"
+  setup: "python manage.py migrate"
+```
+
 ### `plugins`
 
 **Type:** list of mappings (optional)
@@ -568,4 +604,5 @@ All tools consuming `.devrail.yml` follow standard DevRail exit codes:
 | `fail_fast` | boolean | No | `false` | Stop on first failure |
 | `log_format` | string | No | `json` | Output format (`json` or `human`) |
 | `projects` | list of mappings | No | `[]` | Override autodetected per-language project roots (Python/JS monorepos) |
+| `test` | mapping | No | `{}` | Override dependency install (`install`) and pre-test setup (`setup`) for `make test` |
 | `<language>` | mapping | No | -- | Per-language tool overrides |

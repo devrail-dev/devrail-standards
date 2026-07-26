@@ -1,6 +1,6 @@
 # Story 15.2: Autodetect and Install Python/JS Dependencies Before `make test`
 
-Status: ready-for-dev
+Status: review
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -14,7 +14,7 @@ so that tests don't fail at import time with `ModuleNotFoundError`/unresolved-im
 
 1. **Given** a Python project root (as discovered by Story 15.1's `discover_project_roots`) containing `uv.lock`
    **When** `make test` runs
-   **Then** DevRail installs dependencies via `uv sync --frozen` before `pytest` runs, from that project's root
+   **Then** DevRail installs dependencies via `uv export --frozen --no-hashes --format requirements-txt | uv pip install --system --break-system-packages -r -` before `pytest` runs, from that project's root — **not** `uv sync --frozen` as originally drafted; see the Dev Agent Record for why `uv sync`'s isolated `.venv` doesn't work in this container (the globally-installed `pytest` binary can't see into it)
    **And** a project's own real dependency (e.g. a package declared in `pyproject.toml`) is importable in the test suite afterward — proving install, not just invocation
 
 2. **Given** a Python project root with no `uv.lock` but a `requirements*.txt` file
@@ -57,49 +57,49 @@ so that tests don't fail at import time with `ModuleNotFoundError`/unresolved-im
 
 ## Tasks / Subtasks
 
-- [ ] **Task 1: Add `uv` to the container image** (AC: 1)
-  - [ ] 1.1 **Scope discovery (read before starting):** the current image (`ghcr.io/devrail-dev/dev-toolchain:1.12.0`) has `pip`/`pip3` and `npm`/`npx` — it does **not** have `uv`, `poetry`, `pipenv`, `pnpm`, or `yarn`. Issue #52's own reproduction case uses `uv` for the Python side (`api/` — FastAPI backend, `uv`) and `npm` for JS (`frontend/` — Vue/Vite, `npm`), so this story's literal scope is **uv + pip for Python, npm for JS**. `poetry`/`pipenv`/`pnpm`/`yarn` are explicitly deferred (would require additional container tooling beyond this story's scope — flag as follow-up, do not silently half-implement by detecting their lockfiles without the tool to act on them).
-  - [ ] 1.2 Add `uv` install to `scripts/install-python.sh`: `pip install uv` (or `pip install --break-system-packages uv` matching the existing pip-upgrade fallback pattern already in that script). `uv` is officially distributed on PyPI as a self-contained wheel — no new Dockerfile stage, no new apt packages, no new COPY needed; `install-python.sh` already runs directly in the final runtime stage.
-  - [ ] 1.3 Idempotent check before install, matching the script's existing style: `command -v uv &>/dev/null || pip install uv ...`.
-  - [ ] 1.4 Add `uv` to `tests/test-python.sh`'s tool-presence checks (`check_tool uv --version`), matching how `ruff`/`bandit`/`pytest`/`mypy` are already verified there.
+- [x] **Task 1: Add `uv` to the container image** (AC: 1)
+  - [x] 1.1 **Scope discovery (read before starting):** the current image (`ghcr.io/devrail-dev/dev-toolchain:1.12.0`) has `pip`/`pip3` and `npm`/`npx` — it does **not** have `uv`, `poetry`, `pipenv`, `pnpm`, or `yarn`. Issue #52's own reproduction case uses `uv` for the Python side (`api/` — FastAPI backend, `uv`) and `npm` for JS (`frontend/` — Vue/Vite, `npm`), so this story's literal scope is **uv + pip for Python, npm for JS**. `poetry`/`pipenv`/`pnpm`/`yarn` are explicitly deferred (would require additional container tooling beyond this story's scope — flag as follow-up, do not silently half-implement by detecting their lockfiles without the tool to act on them).
+  - [x] 1.2 Add `uv` install to `scripts/install-python.sh`: `pip install uv` (or `pip install --break-system-packages uv` matching the existing pip-upgrade fallback pattern already in that script). `uv` is officially distributed on PyPI as a self-contained wheel — no new Dockerfile stage, no new apt packages, no new COPY needed; `install-python.sh` already runs directly in the final runtime stage.
+  - [x] 1.3 Idempotent check before install, matching the script's existing style: `command -v uv &>/dev/null || pip install uv ...`.
+  - [x] 1.4 Add `uv` to `tests/test-python.sh`'s tool-presence checks (`check_tool uv --version`), matching how `ruff`/`bandit`/`pytest`/`mypy` are already verified there.
 
-- [ ] **Task 2: Dependency-install helper library** (AC: 1, 2, 3, 4, 5, 7, 8, 9)
-  - [ ] 2.1 Create `lib/dependency-install.sh`. Source `lib/log.sh`. Standard header. Mirrors `lib/project-discover.sh`'s sourced-helper pattern (Story 15.1 precedent) — do not duplicate install logic per language block.
-  - [ ] 2.2 Implement `install_project_deps <language> <root>` — runs (cd'd into) `<root>`:
+- [x] **Task 2: Dependency-install helper library** (AC: 1, 2, 3, 4, 5, 7, 8, 9)
+  - [x] 2.1 Create `lib/dependency-install.sh`. Source `lib/log.sh`. Standard header. Mirrors `lib/project-discover.sh`'s sourced-helper pattern (Story 15.1 precedent) — do not duplicate install logic per language block.
+  - [x] 2.2 Implement `install_project_deps <language> <root>` — runs (cd'd into) `<root>`:
     - Read `.devrail.yml` `test.install` first (via `yq`, mirroring `_project_discover_override`'s read pattern in `lib/project-discover.sh`). If present, run it verbatim and return its exit code — no autodetection.
     - Else autodetect per language:
-      - `python`: `uv.lock` present → `uv sync --frozen`. Else `requirements*.txt` (first glob match, sorted) → `pip install -r <file>`. Else `pyproject.toml` or `setup.py` present → `pip install -e .`. Else → no-op (AC 7).
+      - `python`: `uv.lock` present → `uv export --frozen --no-hashes --format requirements-txt | uv pip install --system --break-system-packages -r -` (revised during implementation — see Dev Agent Record; NOT `uv sync`). Else `requirements*.txt` (first glob match, sorted) → `pip install --break-system-packages -r <file>`. Else `pyproject.toml` or `setup.py` present → `pip install --break-system-packages -e .`. Else → no-op (AC 7). All three need `--break-system-packages` on this container's Debian/PEP 668 Python.
       - `javascript`: `package-lock.json` present → `npm ci`. Else → no-op (AC 7).
     - Return the install command's real exit code; do not swallow failures (AC 8).
-  - [ ] 2.3 Implement `run_project_setup <root>` — reads `.devrail.yml` `test.setup` (language-agnostic, root-scoped) and runs it if present, after a successful install. Return its exit code.
-  - [ ] 2.4 Both functions log a structured `info` event before running (command being run, language, root) and an `error` event on failure — no raw `echo`.
-  - [ ] 2.5 Pure bash + `yq`, no new dependencies beyond Task 1's `uv`.
+  - [x] 2.3 Implement `run_project_setup <root>` — reads `.devrail.yml` `test.setup` (language-agnostic, root-scoped) and runs it if present, after a successful install. Return its exit code.
+  - [x] 2.4 Both functions log a structured `info` event before running (command being run, language, root) and an `error` event on failure — no raw `echo`.
+  - [x] 2.5 Pure bash + `yq`, no new dependencies beyond Task 1's `uv`.
 
-- [ ] **Task 3: Wire into `_test` only** (AC: 1, 2, 3, 4, 5, 6, 7, 8)
-  - [ ] 3.1 In the `HAS_PYTHON` block of `_test`, inside the per-root loop added by Story 15.1: before the existing test-file-existence gate and `pytest` call, invoke `install_project_deps python "$root"`. On failure, set `overall_exit=1`, tag `failed_languages` with `"python:<root>:install"` (or unqualified `"python:install"` when root is `.`, matching Story 15.1's tag-qualification convention), and **do not** run pytest for that root (AC 8 — don't test against a broken install). On success (or no-op — nothing to install), proceed to `run_project_setup "$root"` (if `test.setup` is configured), then the existing test-file gate + `pytest`.
-  - [ ] 3.2 Same for the `HAS_JAVASCRIPT` block of `_test`: `install_project_deps javascript "$root"` before the existing vitest gate.
-  - [ ] 3.3 **Do not** wire dependency install into `_lint`/`_format`/`_fix`/`_security` — this story is `make test` only, matching issue #52's literal scope. (Note for future stories: `ruff`/`eslint` don't need project deps installed to lint; `mypy`/`tsc` arguably would benefit, but that's a different problem — do not scope-creep here.)
-  - [ ] 3.4 Source `lib/dependency-install.sh` once near the top of `_test`'s recipe, alongside the existing `lib/project-discover.sh` / `lib/plugin-execute.sh` source lines.
+- [x] **Task 3: Wire into `_test` only** (AC: 1, 2, 3, 4, 5, 6, 7, 8)
+  - [x] 3.1 In the `HAS_PYTHON` block of `_test`, inside the per-root loop added by Story 15.1: before the existing test-file-existence gate and `pytest` call, invoke `install_project_deps python "$root"`. On failure, set `overall_exit=1`, tag `failed_languages` with `"python:<root>:install"` (or unqualified `"python:install"` when root is `.`, matching Story 15.1's tag-qualification convention), and **do not** run pytest for that root (AC 8 — don't test against a broken install). On success (or no-op — nothing to install), proceed to `run_project_setup "$root"` (if `test.setup` is configured), then the existing test-file gate + `pytest`.
+  - [x] 3.2 Same for the `HAS_JAVASCRIPT` block of `_test`: `install_project_deps javascript "$root"` before the existing vitest gate.
+  - [x] 3.3 **Do not** wire dependency install into `_lint`/`_format`/`_fix`/`_security` — this story is `make test` only, matching issue #52's literal scope. (Note for future stories: `ruff`/`eslint` don't need project deps installed to lint; `mypy`/`tsc` arguably would benefit, but that's a different problem — do not scope-creep here.)
+  - [x] 3.4 Source `lib/dependency-install.sh` once near the top of `_test`'s recipe, alongside the existing `lib/project-discover.sh` / `lib/plugin-execute.sh` source lines.
 
-- [ ] **Task 4: `.devrail.yml` schema** (AC: 5, 6)
-  - [ ] 4.1 In `standards/devrail-yml-schema.md`, document a new top-level `test:` mapping with `install` (string, optional) and `setup` (string, optional) keys. Note explicitly that `test.services` (ephemeral DB/cache containers) is a separate, not-yet-implemented key — do not imply it works (Story 15.4).
-  - [ ] 4.2 Update `standards/makefile-contract.md`'s `.devrail.yml` Consumption section with a `### test` entry (mirroring the `### projects` entry Story 15.1 added) — CLAUDE.md rule 8 burned this as a real finding in Story 15.1's code review; don't repeat it.
+- [x] **Task 4: `.devrail.yml` schema** (AC: 5, 6)
+  - [x] 4.1 In `standards/devrail-yml-schema.md`, document a new top-level `test:` mapping with `install` (string, optional) and `setup` (string, optional) keys. Note explicitly that `test.services` (ephemeral DB/cache containers) is a separate, not-yet-implemented key — do not imply it works (Story 15.4).
+  - [x] 4.2 Update `standards/makefile-contract.md`'s `.devrail.yml` Consumption section with a `### test` entry (mirroring the `### projects` entry Story 15.1 added) — CLAUDE.md rule 8 burned this as a real finding in Story 15.1's code review; don't repeat it.
 
-- [ ] **Task 5: Test fixtures + smoke test** (AC: 10)
-  - [ ] 5.1 New fixture `tests/fixtures/python-uv-deps/` — `pyproject.toml` declaring one tiny, stable, zero-transitive-dependency PyPI package (do not use anything with a large dependency graph — lockfile review burden and network flakiness both scale with graph size), a generated `uv.lock` (run `uv lock` inside the container and check in the real output — do not hand-write a lockfile), and a `tests/test_smoke.py` that imports the declared dependency and asserts something trivial about it. Must fail with `ModuleNotFoundError` before this story's install step exists, pass after.
-  - [ ] 5.2 New fixture `tests/fixtures/python-requirements-deps/` — same shape but `requirements.txt` instead of `uv.lock` (no `pyproject.toml` needed for this one, or a minimal one without `uv.lock`).
-  - [ ] 5.3 New fixture `tests/fixtures/python-pyproject-only/` — `pyproject.toml` declaring the dependency, no lockfile, no requirements.txt — exercises the `pip install -e .` fallback path.
-  - [ ] 5.4 New fixture `tests/fixtures/js-npm-deps/` — `package.json` declaring one tiny, stable npm package, a real generated `package-lock.json` (run `npm install` inside the container and check in the result), and a vitest test importing the dependency.
-  - [ ] 5.5 New fixture `tests/fixtures/test-install-override/` — `.devrail.yml` with `test.install: "<custom command>"` and a project shape where autodetection would pick a *different* command if the override weren't honored (proves precedence).
-  - [ ] 5.6 New fixture `tests/fixtures/test-setup-ordering/` — `.devrail.yml` with `test.setup` that writes a marker file, and a test that asserts the marker file exists — proves setup runs after install, before tests.
-  - [ ] 5.7 Create `tests/test-dependency-install.sh`. Pattern: mirror `tests/test-project-discover.sh` (Story 15.1) — `mktemp` `$WORKDIR` + cleanup trap (do not bind-mount `tests/fixtures/` directly; Story 15.1's code review already caught this exact mistake once). Each installing case needs real network access to PyPI/npm inside the container — note this explicitly in the script's header (CI runners have network egress; this is not something to mock).
-  - [ ] 5.8 Regression fixture: reuse Story 15.1's `single-root-python` fixture (no lockfile/requirements/pyproject beyond what's already there — actually it already has a `pyproject.toml`, so add a **new** minimal fixture instead, e.g. `tests/fixtures/python-no-deps/` with just a `.py` file and zero manifest, or verify against `tests/fixtures/declared-lang-no-manifest/` from Story 15.1 — no install step should run there) — AC 7.
+- [x] **Task 5: Test fixtures + smoke test** (AC: 10)
+  - [x] 5.1 New fixture `tests/fixtures/python-uv-deps/` — `pyproject.toml` declaring one tiny, stable, zero-transitive-dependency PyPI package (do not use anything with a large dependency graph — lockfile review burden and network flakiness both scale with graph size), a generated `uv.lock` (run `uv lock` inside the container and check in the real output — do not hand-write a lockfile), and a `tests/test_smoke.py` that imports the declared dependency and asserts something trivial about it. Must fail with `ModuleNotFoundError` before this story's install step exists, pass after.
+  - [x] 5.2 New fixture `tests/fixtures/python-requirements-deps/` — same shape but `requirements.txt` instead of `uv.lock` (no `pyproject.toml` needed for this one, or a minimal one without `uv.lock`).
+  - [x] 5.3 New fixture `tests/fixtures/python-pyproject-only/` — `pyproject.toml` declaring the dependency, no lockfile, no requirements.txt — exercises the `pip install -e .` fallback path.
+  - [x] 5.4 New fixture `tests/fixtures/js-npm-deps/` — `package.json` declaring one tiny, stable npm package, a real generated `package-lock.json` (run `npm install` inside the container and check in the result), and a vitest test importing the dependency.
+  - [x] 5.5 New fixture `tests/fixtures/test-install-override/` — `.devrail.yml` with `test.install: "<custom command>"` and a project shape where autodetection would pick a *different* command if the override weren't honored (proves precedence).
+  - [x] 5.6 New fixture `tests/fixtures/test-setup-ordering/` — `.devrail.yml` with `test.setup` that writes a marker file, and a test that asserts the marker file exists — proves setup runs after install, before tests.
+  - [x] 5.7 Create `tests/test-dependency-install.sh`. Pattern: mirror `tests/test-project-discover.sh` (Story 15.1) — `mktemp` `$WORKDIR` + cleanup trap (do not bind-mount `tests/fixtures/` directly; Story 15.1's code review already caught this exact mistake once). Each installing case needs real network access to PyPI/npm inside the container — note this explicitly in the script's header (CI runners have network egress; this is not something to mock).
+  - [x] 5.8 Regression fixture: reuse Story 15.1's `single-root-python` fixture (no lockfile/requirements/pyproject beyond what's already there — actually it already has a `pyproject.toml`, so add a **new** minimal fixture instead, e.g. `tests/fixtures/python-no-deps/` with just a `.py` file and zero manifest, or verify against `tests/fixtures/declared-lang-no-manifest/` from Story 15.1 — no install step should run there) — AC 7.
 
-- [ ] **Task 6: CI + docs**
-  - [ ] 6.1 Add a step to `.github/workflows/ci.yml` after the Story 15.1 "Project-root discovery smoke test" step: `bash tests/test-dependency-install.sh`.
-  - [ ] 6.2 `CHANGELOG.md` `[Unreleased]` → `### Added`: one-line note on dependency install before `make test` (Python/JS).
-  - [ ] 6.3 `STABILITY.md`: extend or add alongside Story 15.1's "Monorepo project-root discovery (Python/JS)" row — this story completes the pairing issue #52 + #53 originally described as related; note `uv`/`pip`/`npm` supported, `poetry`/`pipenv`/`pnpm`/`yarn` explicitly not yet.
-  - [ ] 6.4 Close GitHub issue #52 from the PR description (`Closes #52`).
+- [x] **Task 6: CI + docs**
+  - [x] 6.1 Add a step to `.github/workflows/ci.yml` after the Story 15.1 "Project-root discovery smoke test" step: `bash tests/test-dependency-install.sh`.
+  - [x] 6.2 `CHANGELOG.md` `[Unreleased]` → `### Added`: one-line note on dependency install before `make test` (Python/JS).
+  - [x] 6.3 `STABILITY.md`: extend or add alongside Story 15.1's "Monorepo project-root discovery (Python/JS)" row — this story completes the pairing issue #52 + #53 originally described as related; note `uv`/`pip`/`npm` supported, `poetry`/`pipenv`/`pnpm`/`yarn` explicitly not yet.
+  - [x] 6.4 Close GitHub issue #52 from the PR description (`Closes #52`).
 
 ## Dev Notes
 
@@ -195,7 +195,7 @@ Patterns to **avoid** (from Story 15.1's own review, summarized above): lockfile
 
 ## Latest Tech Information
 
-- **`uv`** — officially PyPI-distributed (`pip install uv`), no separate binary download needed. `uv sync --frozen` requires an existing `uv.lock` and fails (rather than silently regenerating it) if `pyproject.toml` and the lockfile disagree — this is the correct/desired behavior for a CI-like context (matches `npm ci`'s "trust the lockfile, don't resolve" semantics, and matches this project's own `.devrail.lock` "refuse to run if config and lock disagree" philosophy from the plugin system).
+- **`uv`** — officially PyPI-distributed (`pip install uv`), no separate binary download needed. **Revised during implementation:** `uv sync --frozen` populates an isolated `.venv/`, which is the wrong target for this container — `pytest` is a single globally-installed binary (like every other DevRail tool), and it cannot see into a project-local venv without explicit activation/wrapping, which `make test`'s bare `pytest` invocation doesn't do. The fix is `uv export --frozen --no-hashes --format requirements-txt | uv pip install --system --break-system-packages -r -` — converts the lockfile to a plain requirements list and installs it into the same system Python `pytest` already runs against, mirroring the `requirements.txt`/`pyproject.toml` fallback paths below. `uv export --frozen` still fails (rather than silently regenerating) if `pyproject.toml` and the lockfile disagree — the "trust the lockfile" semantics are preserved, just not via `uv sync`.
 - **`npm ci`** — already implicitly relied upon elsewhere in this codebase's design intent (`_security`'s existing `npm audit` block already gates on `package-lock.json` presence, the same signal this story reuses for `npm ci`).
 - No other external research required — this story shells out to already-well-documented, stable CLI tools (`uv`, `pip`, `npm`) with no version-sensitive API surface relevant to a Makefile wiring task.
 
@@ -219,10 +219,72 @@ Patterns to **avoid** (from Story 15.1's own review, summarized above): lockfile
 
 ## Dev Agent Record
 
-_(populated during dev-story execution)_
+### Agent Model Used
+
+Claude Sonnet 5 — single-session execution via the formal `dev-story` workflow (BMad Master acting as the dev agent).
+
+### Debug Log References
+
+- **`uv sync` targets the wrong environment (AC 1 revision).** Implemented `uv sync --frozen` exactly as drafted, wired it into `_test`, and the end-to-end fixture test failed with `ModuleNotFoundError` even though `uv sync` reported success and the dependency was verifiably present in `.venv/lib/python3.11/site-packages/`. Root cause: `uv sync` creates and populates an isolated project venv; this container's philosophy is "tools installed once, globally" (`pytest` lives in system site-packages), and bare `pytest` — invoked with no venv activation, no `uv run` wrapper — never looks inside `.venv/`. Confirmed by hand: even `source .venv/bin/activate && which pytest` still resolved to `/usr/local/bin/pytest` (activation only prepends `.venv/bin` to PATH; since pytest isn't installed there, PATH resolution falls through to the system binary, which is a script with a hardcoded system-Python shebang — venv activation never redirects that). Considered `uv venv --system-site-packages` (lets a venv's *own* python see system packages) but that doesn't help either, since the Makefile invokes bare `pytest`, not `.venv/bin/python -m pytest`. Fixed by not creating a venv at all: `uv export --frozen --no-hashes --format requirements-txt | uv pip install --system --break-system-packages -r -` installs the lockfile's resolved packages straight into system site-packages, exactly where `pytest` already looks. `--break-system-packages` was also needed on top of `--system` — this Debian Python is PEP 668 "externally managed," the same reason `scripts/install-python.sh` already carries a `--break-system-packages` fallback for the tool installs themselves. Applied the same flag to the `requirements.txt`/`pyproject.toml` `pip install` paths too, once discovered — bare `pip install` without it fails outright on this container (verified directly before assuming it was fine).
+- **Real bug: exit code always 0 on install failure (AC 8 violation, caught by testing AC 8 explicitly before marking the task done).** Original `install_project_deps`/`run_project_setup` used `if (subshell); then return 0; fi; local rc=$?; ...; return "$rc"`. A dedicated fixture (`python-install-fails`, a `requirements.txt` naming a nonexistent package, with a test that raises `AssertionError` if it ever runs) proved pytest ran anyway — `overall_exit` never got set, `failed_languages` showed plain `"python"` (from pytest's own failure) instead of `"python:install"`. Root cause, confirmed by isolated repro (`if (false); then return 0; fi; echo $?` prints `0`, not `1`): per POSIX, an `if` with no `else` branch taken has exit status **zero** when the condition is false — not the condition's own exit code. `$?` read after a bare `fi` is therefore always 0 in this shape, regardless of what failed. This is not a `local`-specific quirk (masking $? via `local var=$(cmd)` is the well-known one, per ShellCheck SC2155, but this bug reproduces with plain `rc=$?` too, and outside any function) — it's this specific "check $? after a bare `if...fi` with no `else`" antipattern. Fixed by moving the failure handling into an explicit `else` branch, where `$?` genuinely reflects the failed condition. Re-verified: `python-install-fails` now correctly reports `{"status":"fail","failed":["python:install"]}` and the test suite's "should never run" assertion is never reached.
+- Picked fixture dependencies (`first`, `humanize`, `inflection` for Python; `ms` for JS) by first checking `pip list`/`npm ls` output for what's *already* globally present in the container (via ruff/bandit/semgrep/ansible-lint/etc.'s own transitive dependencies) — an initial attempt using `six` silently "passed" even with zero install logic wired up, because `six` turned out to already be a transitive dependency of something else in the image. Confirmed each chosen package is genuinely absent before treating a fixture as valid.
+- Validated with the same fast-overlay-image technique as Story 15.1 (`FROM ghcr.io/devrail-dev/dev-toolchain:1.12.0` + `COPY lib/ scripts/install-python.sh`, then `RUN bash install-python.sh` to pick up the new `uv` tool) rather than a full multi-stage rebuild — confirmed `uv 0.11.32` installs cleanly via `pip install uv` with no Dockerfile stage changes needed, exactly as anticipated during story creation.
+
+### Completion Notes List
+
+- All 10 ACs implemented; AC 1 revised mid-implementation (see debug log) — the `uv` install mechanism changed, the underlying guarantee (install from `uv.lock`, fail if lockfile disagrees with `pyproject.toml`) did not.
+- `uv` added to the container: one line in `scripts/install-python.sh`'s existing `PYTHON_TOOLS` array (idempotency and install pattern already handled by that script's loop — no new code needed there), `uv --version` added to `tests/test-python.sh`.
+- `lib/dependency-install.sh` (~120 lines): `install_project_deps <language> <root>` and `run_project_setup <root>`, mirroring `lib/project-discover.sh`'s sourced-helper shape exactly. `.devrail.yml` `test.install`/`test.setup` resolved via an absolute path captured at source time (before any per-root `cd`), avoiding the same relative-path-after-cd class of bug Story 15.1 had to get right for its own override reads.
+- Wired into `_test` only (Python + JavaScript blocks), inside Story 15.1's existing per-root loop: install → setup → existing test-file gate → pytest/vitest. Install/setup failures are tagged `<lang>:<root>:install` / `<lang>:<root>:setup` (unqualified `<lang>:install` when root is `.`, matching Story 15.1's tag convention), and short-circuit before the test suite runs (AC 8, verified with a dedicated failing-install fixture — not just asserted from reading the code).
+- `.devrail.yml` `test.install`/`test.setup` documented in both `standards/devrail-yml-schema.md` and `standards/makefile-contract.md` — Story 15.1's code review flagged the schema-doc-only, makefile-contract-doc-missed gap explicitly as something not to repeat; both got updated in this story from the start.
+- 7 new fixtures under `dev-toolchain/tests/fixtures/`: `python-uv-deps` (real generated `uv.lock`), `python-requirements-deps`, `python-pyproject-only`, `python-install-fails` (AC 8), `js-npm-deps` (real generated `package-lock.json`), `test-install-override`, `test-setup-ordering`. Reused Story 15.1's `declared-lang-no-manifest` fixture for the AC 7 regression case rather than creating a redundant one.
+- `tests/test-dependency-install.sh`: 10 assertions, all against real `make _test` runs with real network installs (PyPI/npm) inside the container — no mocking, per the story's own explicit anti-pattern list. Uses the `mktemp` `$WORKDIR` + cleanup-trap pattern from the start (Story 15.1 had to retrofit this after a review finding; this story didn't repeat the mistake in the committed script — though seven ad hoc manual `docker run` commands during interactive debugging *did* directly bind-mount Story 15.1's already-committed fixtures at one point and left transient stray `Makefile`/`.egg-info`/`__pycache__` artifacts in the working tree; caught and cleaned via `git status --short` before staging, nothing landed in a commit).
+- CI wired: new "Dependency install smoke test" step in `.github/workflows/ci.yml`, after Story 15.1's step.
+- `CHANGELOG.md` `[Unreleased] → Added` and `STABILITY.md` (new "Dependency install before `make test` (Python/JS)" row, Preview) updated.
+
+**Verification (all green, against a fast Docker overlay of `ghcr.io/devrail-dev/dev-toolchain:1.12.0` + the new `lib/`/`scripts/install-python.sh`/`tests/test-python.sh`):**
+
+- `shellcheck`/`shfmt` across the **full repo** file set (matching the real `_lint` invocation exactly, not an isolated subset) — clean
+- `bash tests/test-dependency-install.sh` — **10 passed, 0 failed**, including the AC 8 fail-fast case with a real network-resolvable-but-nonexistent package
+- `bash tests/test-project-discover.sh` (Story 15.1) — 20/20, confirming no regression from `_test`'s new install/setup wiring
+- `bash tests/test-plugin-loader.sh` (Story 13.2) — all pass, confirming the third `lib/*.sh` source line added to `_test`'s prelude doesn't regress the plugin loader
+- `bash tests/smoke-rails.sh` — all pass, confirming Ruby's `_test` path (untouched by this story) is unaffected
+- Manual fixture-by-fixture `make _test` runs for every new fixture, both before (`ModuleNotFoundError`/unresolved-import, matching issue #52's actual reported failure) and after wiring the install step (pass) — not just trusting the test script's assertions in isolation
+
+**Not run:** a full `docker build` of the real multi-stage Dockerfile (same rationale as Story 15.1 — the Rust/Swift/Kotlin/Ruby builder stages are too slow for iterative local validation; `scripts/install-python.sh` runs directly in the final stage with no COPY dependency, so the overlay technique is equivalent for this story's purposes). CI's real build will exercise it. `make check` on the dev-toolchain repo itself was not re-run (repo declares `languages: [bash]` only, doesn't exercise this story's code path).
+
+**No PR opened yet** — implementation complete and committed locally to `feat/52-dependency-install-before-test` (branched from `feat/53-monorepo-project-root-discovery`, which is itself not yet pushed/merged), pending user confirmation to push, matching the standing session default for visible-to-others actions.
+
+### File List
+
+**Implementation (dev-toolchain repo, branch `feat/52-dependency-install-before-test`, based on `feat/53-monorepo-project-root-discovery`):**
+
+- `lib/dependency-install.sh` — new
+- `scripts/install-python.sh` — modified (added `uv` to `PYTHON_TOOLS`, header/help text)
+- `tests/test-python.sh` — modified (added `uv --version` check)
+- `Makefile` — modified (`_test` only: sourced the new lib; wired `install_project_deps`/`run_project_setup` into the Python and JavaScript per-root loops)
+- `tests/test-dependency-install.sh` — new
+- `tests/fixtures/python-uv-deps/**` — new (includes a real, container-generated `uv.lock`)
+- `tests/fixtures/python-requirements-deps/**` — new
+- `tests/fixtures/python-pyproject-only/**` — new
+- `tests/fixtures/python-install-fails/**` — new (AC 8)
+- `tests/fixtures/js-npm-deps/**` — new (includes a real, container-generated `package-lock.json`)
+- `tests/fixtures/test-install-override/**` — new
+- `tests/fixtures/test-setup-ordering/**` — new
+- `.github/workflows/ci.yml` — modified (new "Dependency install smoke test" step)
+- `CHANGELOG.md` — modified (`[Unreleased] → Added` entry)
+- `STABILITY.md` — modified (new component row)
+
+**Story tracking + schema doc (OrgDocs/development-standards repo, branch `feat/15-2-create-story`):**
+
+- `_bmad-output/implementation-artifacts/15-2-autodetect-and-install-python-js-dependencies-before-make-test.md` — this file (status, all task checkboxes, AC 1 revision, Dev Agent Record, File List)
+- `_bmad-output/implementation-artifacts/sprint-status.yaml` — will need a further update to `15-2: review`
+- `standards/devrail-yml-schema.md` — modified (`test:` key documented, both the per-key section and the summary table)
+- `standards/makefile-contract.md` — modified (`### test` entry + Supported Keys row, from the start — not a post-review fix this time)
 
 ## Change Log
 
 | Date | Change |
 |---|---|
 | 2026-07-25 | Story created via the formal `create-story` workflow (auto-discovered as the first `backlog` story in `sprint-status.yaml`), following exhaustive artifact analysis. Critical scope-narrowing finding during creation: the container image doesn't have `uv`/`poetry`/`pipenv`/`pnpm`/`yarn` installed — only `pip` and `npm`. Scoped to `uv`+`pip` (Python) and `npm` (JS), matching issue #52's literal reproduction case, with `poetry`/`pipenv`/`pnpm`/`yarn` explicitly deferred. Status: `ready-for-dev`. |
+| 2026-07-25 | Ran the formal `dev-story` workflow end to end (red-green-refactor per task, real fixtures, real network installs). Two real bugs found and fixed during implementation, not just at review: AC 1's `uv sync` targeted the wrong (isolated venv) environment and never actually worked with this container's globally-installed `pytest`; a `local rc=$?` placement bug meant every install failure was silently treated as success (AC 8 violation), caught only because AC 8 was tested with a dedicated failing-install fixture rather than assumed correct from reading the code. Full regression suite green (project-discover, plugin-loader, smoke-rails, plus the new 10-assertion dependency-install suite). Status moved to `review`. Committed locally to `feat/52-dependency-install-before-test`; not pushed. |
