@@ -145,6 +145,109 @@ docker_volumes:
   - shared-cache:/cache
 ```
 
+### `projects`
+
+**Type:** list of mappings (optional)
+
+**Default:** `[]` (empty — autodetection applies)
+
+**Description:** Overrides autodetection of per-language project roots in a monorepo. Without this key, `make lint`/`format`/`fix`/`test`/`security` autodetect each declared language's project directory from its manifest file (`pyproject.toml`/`setup.py`/`setup.cfg` for Python, `package.json` for JavaScript/TypeScript, `go.mod` for Go, `Cargo.toml` for Rust) and run that language's tools with cwd set there, so local config (`tsconfig.json`, `vite.config.ts` path aliases, `pyproject.toml`) resolves correctly — and, for Go/Rust, so `go test`/`golangci-lint`/`cargo test`/`cargo clippy`/`cargo fmt` don't fail outright with "directory prefix . does not contain main module" / "could not find Cargo.toml" errors when the module isn't rooted at the repo root. A manifest at the repository root is treated as the common single-project case (root resolves to `.`, matching pre-monorepo-support behavior exactly); when no manifest exists anywhere, tools fall back to running from the repository root, same as before this feature existed. Set `projects:` only for layouts autodetection can't infer.
+
+**Known autodetection limitation:** autodetection treats a manifest at the repository root as authoritative and does not also descend into subdirectories — if your repo has a root-level `pyproject.toml` used only for shared tool config (a common pattern) alongside real per-language subdirectories, autodetection collapses to root-only and won't discover the subdirectories. Use an explicit `projects:` entry per subdirectory to get correct per-project execution in that layout.
+
+**Go workspaces (`go.work`):** autodetection looks for `go.mod` files and is unaware of `go.work` — Go's own native multi-module workspace mechanism. In practice this doesn't conflict: a `go.work`-based repo typically has no `go.mod` at the repository root (each workspace member has its own), so autodetection finds and runs each member module independently from its own directory, which is correct on its own terms. What it does **not** do is preserve any `go.work`-level behavior that spans modules (e.g. a `replace` directive resolved only in workspace mode) — each module is tested/linted in isolation, as if `go.work` didn't exist. If your workspace relies on cross-module resolution, either declare each member as an explicit `projects:` entry pointing at a wrapper command that runs `go build`/`go test` from the workspace root, or track this as a gap to revisit (not yet a dedicated story).
+
+**Entry shape:** Each entry is a mapping with these keys:
+
+- **`path`** (string, required) — the project's root directory, relative to the repository root.
+- **`languages`** (list of strings, required) — which `languages:` entries this project supplies tools for.
+
+**Validation rules:**
+
+- `path` should name a directory that exists in the repository — a non-existent path logs a warning at runtime but is not rejected outright (unlike `plugins:`, `projects:` has no dedicated schema validator yet)
+- `languages` should be a non-empty list of strings drawn from the declared `languages:` list — this is not currently enforced; an unrecognized or mismatched entry is silently ignored rather than erroring
+- Honored for `python`, `javascript`, `go`, and `rust`. Ansible needs no equivalent — `ansible-lint` already recursively discovers playbooks from cwd regardless of where they live in the repo, with no root-marker file the way `go.mod`/`Cargo.toml` are for their toolchains.
+
+**Example:**
+
+```yaml
+languages:
+  - python
+  - javascript
+
+projects:
+  - path: api
+    languages: [python]
+  - path: frontend
+    languages: [javascript]
+```
+
+### `test`
+
+**Type:** mapping (optional)
+
+**Default:** `{}` (empty — autodetection applies)
+
+**Description:** Controls dependency installation and setup for `make test`. Without this key, `make test` autodetects and installs each Python/JavaScript project's dependencies (from the roots discovered per the `projects` key above) before running `pytest`/`vitest`, so tests don't fail at import time with `ModuleNotFoundError`/unresolved-import errors.
+
+**Autodetection (Python):** first match wins — `uv.lock` present → `uv export --frozen --no-hashes --format requirements-txt | uv pip install --system --break-system-packages -r -`; else `requirements*.txt` present → `pip install --break-system-packages -r <file>` (plain `requirements.txt` wins if present, regardless of other `requirements-*.txt` variants; otherwise the alphabetically-first match); else `pyproject.toml`/`setup.py` present → `pip install --break-system-packages -e .`; else no install runs.
+
+**Autodetection (JavaScript/TypeScript):** `package-lock.json` present → `npm ci`; else no install runs.
+
+**Currently supported package managers:** `uv` and `pip` (Python), `npm` (JS/TS) only. `poetry`, `pipenv`, `pnpm`, and `yarn` are not installed in the container and their lockfiles are not autodetected — this is tracked as follow-on work (Story 15.3+), not a bug. Installs land in the container's system Python/Node environment, not an isolated per-project virtualenv — this container's tools (`pytest`, `ruff`, etc.) are themselves installed system-wide, so a project's own dependencies have to land in the same place to be visible to them.
+
+**Operational notes:**
+
+- **`make test` now requires network egress** (to PyPI and/or the npm registry) for any Python/JS project with a manifest — this is new as of this feature; previously `make test` had no network dependency. CI runners typically have this by default; air-gapped or network-restricted environments will need `test.install` pointed at a local/vendored install path, or a private package index configured via the usual `pip`/`npm` environment variables.
+- **The `pip install -e .` fallback** (no lockfile, no `requirements*.txt` — just a `pyproject.toml`/`setup.py`) leaves a `<package-name>.egg-info/` directory inside the project's own source tree as a normal editable-install side effect. It's harmless but will show up as an untracked directory in `git status` if you don't already `.gitignore` it.
+
+**Keys:**
+
+- **`install`** (string, optional) — a shell command that replaces autodetection entirely for every discovered project root of every declared language. Use this when autodetection can't infer your setup (e.g. a `poetry.lock`-based project, or an install step with extra flags).
+- **`setup`** (string, optional) — a shell command that runs after a successful install and before the test suite, for every discovered project root of every declared language (e.g. database migrations). No-op if absent.
+- **`services`** (list of strings, optional) — ephemeral service containers started before `make test` and torn down afterward (success or failure). Currently supports `postgres:<tag>` (injects `DATABASE_URL=postgresql://postgres:devrail@<container>:5432/devrail_test`) and `redis:<tag>` (injects `REDIS_URL=redis://<container>:6379`) — any other image reference fails fast with a clear error rather than being silently skipped. See "Ephemeral test services" below for the full contract.
+
+**Validation rules:**
+
+- `install` and `setup` should be valid shell command strings — neither is currently schema-validated; a malformed command simply fails at `make test` runtime with a normal shell error, the same as any other misconfigured `.devrail.yml` string value
+- A failed install or setup step fails `make test` immediately for that project root — the test suite does not run against a broken/partial install
+- `services` entries must be `postgres:<tag>` or `redis:<tag>` — anything else fails `make test` immediately (exit 2), before any container is started
+- `services` may declare at most one entry per kind — a second `postgres:<tag>` (or `redis:<tag>`) entry fails fast (exit 2) rather than silently starting an orphaned container whose connection string gets shadowed by the later entry
+- `services` and the top-level `docker_network` key are **mutually exclusive** — both attempt to set `docker run`'s `--network` flag for the `test` target, and only one can win; declaring both fails fast with a clear error rather than silently picking one
+
+**Ephemeral test services (`test.services`):**
+
+Orchestration happens entirely on the **host** (never inside the toolchain container, which has no `docker` CLI or `/var/run/docker.sock` access — deliberately, to avoid the privilege-escalation surface that would create). Before `make test` runs, DevRail creates a throwaway Docker network, starts each declared service container attached to it, and waits for the service's own readiness check (`pg_isready` for Postgres, `redis-cli ping` for Redis — not just "the TCP port is open"). After the test suite finishes (pass or fail), every service container and the network are removed.
+
+A process killed with `SIGKILL` mid-run (a shell trap cannot intercept `SIGKILL`) can leave orphaned containers/network behind — the *next* `make test` invocation detects this automatically and cleans up before starting fresh, so orphans don't accumulate indefinitely, but they can persist between the kill and the next run.
+
+Credentials are fixed (`postgres`/`devrail` for Postgres; no auth for Redis) and not configurable — this is intentional, not an oversight: each run gets a brand-new, throwaway network reachable only by that run's own containers, torn down at the end, so there's nothing durable to protect a password against. Don't reuse these containers as anything other than ephemeral `make test` scaffolding.
+
+**Known limitation:** the orchestration state (network name, container names, injected env) lives at a fixed path, `.devrail/test-services/`, not one namespaced per invocation. Two `make test` runs started concurrently in the *same* checkout (e.g. two terminals) will collide — the second run's stale-state self-healing can tear down the first run's still-active containers, not just a genuinely abandoned run's. Run `make test` serially per checkout, the same assumption the rest of the Makefile's host-side caching (`.devrail/extended-image-tag`, `.devrail/host-bin/`) already makes.
+
+`docker-compose.test.yml` autodetection is not implemented and not planned as part of this feature — it's a distinct scope (parsing and translating an entirely different config format) that would be its own follow-up if ever pursued.
+
+**Examples:**
+
+```yaml
+languages:
+  - python
+
+test:
+  services:
+    - postgres:16
+    - redis:7
+```
+
+```yaml
+languages:
+  - python
+
+test:
+  install: "poetry install"
+  setup: "python manage.py migrate"
+```
+
 ### `plugins`
 
 **Type:** list of mappings (optional)
@@ -532,4 +635,6 @@ All tools consuming `.devrail.yml` follow standard DevRail exit codes:
 | `languages` | list of strings | Yes | -- | Languages used in the project |
 | `fail_fast` | boolean | No | `false` | Stop on first failure |
 | `log_format` | string | No | `json` | Output format (`json` or `human`) |
+| `projects` | list of mappings | No | `[]` | Override autodetected per-language project roots (Python/JS monorepos) |
+| `test` | mapping | No | `{}` | Override dependency install (`install`) and pre-test setup (`setup`); start ephemeral Postgres/Redis containers (`services`) for `make test` |
 | `<language>` | mapping | No | -- | Per-language tool overrides |

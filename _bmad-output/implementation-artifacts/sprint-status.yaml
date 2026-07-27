@@ -148,3 +148,10 @@ development_status:
   14-3-add-kotlin-language-ecosystem: done
   14-4-write-kotlin-support-blog-post: done
   epic-14-retrospective: optional
+
+  epic-15: in-progress
+  15-1-autodetect-project-roots-for-python-javascript-monorepos: review
+  15-2-autodetect-and-install-python-js-dependencies-before-make-test: review
+  15-3-extend-project-root-discovery-to-go-rust-and-ansible: review
+  15-4-test-services-ephemeral-service-containers: review
+  epic-15-retrospective: optional
