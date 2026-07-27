@@ -212,6 +212,7 @@ projects:
 - `install` and `setup` should be valid shell command strings — neither is currently schema-validated; a malformed command simply fails at `make test` runtime with a normal shell error, the same as any other misconfigured `.devrail.yml` string value
 - A failed install or setup step fails `make test` immediately for that project root — the test suite does not run against a broken/partial install
 - `services` entries must be `postgres:<tag>` or `redis:<tag>` — anything else fails `make test` immediately (exit 2), before any container is started
+- `services` may declare at most one entry per kind — a second `postgres:<tag>` (or `redis:<tag>`) entry fails fast (exit 2) rather than silently starting an orphaned container whose connection string gets shadowed by the later entry
 - `services` and the top-level `docker_network` key are **mutually exclusive** — both attempt to set `docker run`'s `--network` flag for the `test` target, and only one can win; declaring both fails fast with a clear error rather than silently picking one
 
 **Ephemeral test services (`test.services`):**
@@ -219,6 +220,10 @@ projects:
 Orchestration happens entirely on the **host** (never inside the toolchain container, which has no `docker` CLI or `/var/run/docker.sock` access — deliberately, to avoid the privilege-escalation surface that would create). Before `make test` runs, DevRail creates a throwaway Docker network, starts each declared service container attached to it, and waits for the service's own readiness check (`pg_isready` for Postgres, `redis-cli ping` for Redis — not just "the TCP port is open"). After the test suite finishes (pass or fail), every service container and the network are removed.
 
 A process killed with `SIGKILL` mid-run (a shell trap cannot intercept `SIGKILL`) can leave orphaned containers/network behind — the *next* `make test` invocation detects this automatically and cleans up before starting fresh, so orphans don't accumulate indefinitely, but they can persist between the kill and the next run.
+
+Credentials are fixed (`postgres`/`devrail` for Postgres; no auth for Redis) and not configurable — this is intentional, not an oversight: each run gets a brand-new, throwaway network reachable only by that run's own containers, torn down at the end, so there's nothing durable to protect a password against. Don't reuse these containers as anything other than ephemeral `make test` scaffolding.
+
+**Known limitation:** the orchestration state (network name, container names, injected env) lives at a fixed path, `.devrail/test-services/`, not one namespaced per invocation. Two `make test` runs started concurrently in the *same* checkout (e.g. two terminals) will collide — the second run's stale-state self-healing can tear down the first run's still-active containers, not just a genuinely abandoned run's. Run `make test` serially per checkout, the same assumption the rest of the Makefile's host-side caching (`.devrail/extended-image-tag`, `.devrail/host-bin/`) already makes.
 
 `docker-compose.test.yml` autodetection is not implemented and not planned as part of this feature — it's a distinct scope (parsing and translating an entirely different config format) that would be its own follow-up if ever pursued.
 

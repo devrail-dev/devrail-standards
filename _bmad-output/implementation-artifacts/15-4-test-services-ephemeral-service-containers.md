@@ -247,9 +247,52 @@ Claude Sonnet 5 — single-session execution via the formal `dev-story` workflow
 - `standards/devrail-yml-schema.md` — modified (`test.services` documented — replaces the "not implemented" placeholder from Story 15.2)
 - `standards/makefile-contract.md` — modified (`### test` entry extended)
 
+**Review-fix pass, dev-toolchain repo (same branch `feat/52-test-services`):**
+
+- `Makefile` — further modified (new `DEVRAIL_TEST_SERVICES_PROBE`/`HAS_TEST_SERVICES_DECLARED` variables; guards added to `_test-services-host-bin` and `_test-services-up`; `test:`'s cleanup trap now checks for the extracted script's existence rather than assuming it)
+- `scripts/test-services.sh` — further modified (duplicate-service-kind rejection in the validation loop)
+
+**Review-fix pass, development-standards repo (same branch `feat/15-4-create-story`):**
+
+- `standards/devrail-yml-schema.md` — further modified (duplicate-kind validation rule, credential rationale, concurrent-invocation known limitation)
+
 ## Change Log
 
 | Date | Change |
 |---|---|
 | 2026-07-26 | Story created via the formal `create-story` workflow (auto-discovered as the last remaining `backlog` story in Epic 15). Unlike prior stories in this epic, the critical design question here was architectural (how to orchestrate sibling containers safely) rather than a claim to verify — investigated and confirmed the toolchain container has no Docker socket access (ruling out in-container orchestration), then designed and hand-verified a host-side orchestration approach (network create, service start, readiness wait, cross-container connectivity, cleanup) end-to-end for both Postgres and Redis before writing any AC. Scoped to Postgres/Redis only (matching the epic's own example, not a generic-image claim); `docker-compose.test.yml` autodetection explicitly deferred. Status: `ready-for-dev`. |
 | 2026-07-27 | `dev-story` complete: implemented `scripts/test-services.sh` (up/down, stale-state self-healing, fail-fast validation) and wired it into the Makefile via a `_test-services-up`/`_test-services-host-bin` prerequisite pair (mirroring the existing `_extended-image`/`_devrail-host-bin` local-vs-extracted pattern) plus an `EXIT` trap on `test:` for guaranteed teardown. New `tests/test-test-services.sh` (19 assertions) found and fixed 3 bugs in the test harness itself (not the product code): a subshell-scoped counter that silently never incremented across `$(...)` calls, a bare `rc=$?` that `set -e` would have skipped on a real failure, and a `kill -9` on the wrong process group that took out the whole test script instead of just the simulated crashed container. All 10 ACs verified, including a genuine mid-flight `SIGKILL` of `make test` followed by confirming both the orphaned resources and the next run's self-healing. Full existing regression suite (project-discover, dependency-install, plugin-loader, smoke-rails) re-run and unaffected. Status: `review`. |
+| 2026-07-27 | `code-review` complete: found and fixed 3 issues. (1) `_test-services-host-bin` unconditionally extracted the orchestrator script from the image on every consumer repo without local `scripts/`, even when `test.services` was never declared — unlike its sibling `_devrail-host-bin`, which guards on `HAS_PLUGINS_DECLARED`. Added the matching `HAS_TEST_SERVICES_DECLARED` guard (plus a matching guard on `_test-services-up`'s invocation and a defensive existence check in `test:`'s cleanup trap, since skipping extraction meant the extracted script might no longer exist for the trap to call). (2) Duplicate service kinds (e.g. two `postgres:<tag>` entries) weren't rejected — both containers would start, but the second's `DATABASE_URL` line would silently shadow the first's in the env file, leaving the first container running but unreachable for the whole test run. Added a dedup check to the validation loop, fails fast before anything starts. (3) The schema doc didn't explain that the fixed Postgres/Redis credentials are intentional (throwaway per-run network, nothing durable to protect) or that concurrent `make test` runs in the same checkout race on the shared `.devrail/test-services/` state path — documented both. All fixes re-verified against a live overlay image: full 19-assertion suite still green, plus two new manual checks (extraction now skipped end-to-end when no services declared; a duplicate-`postgres` config now fails fast with nothing started). Status: `review`. |
+
+## Senior Developer Review (AI)
+
+**Reviewer:** Matthew (review executed by Claude Sonnet 5 — same model that implemented the story; see caveat below)
+**Date:** 2026-07-27
+**Outcome:** Approve (after in-session fixes)
+
+### Caveat
+
+Same caveat as every prior story in this epic: this is the same model/session that wrote the implementation, not an independent second reviewer. To compensate, the review deliberately looked past the ACs (which the implementation already satisfies, per the dev-story verification) and instead diffed this story's own two host-side Makefile targets against their explicitly-named precedent (`_devrail-host-bin`/`_extended-image`, built for the plugin system) line by line, on the theory that "mirrors an existing pattern" claims are exactly where a real story-to-story regression is most likely to hide — a deviation from a pattern the commit message itself claims to be following is a stronger signal than a fresh read of unfamiliar code.
+
+### Findings
+
+**MEDIUM severity:**
+
+- [x] **M1** — `_test-services-host-bin` did not carry the `HAS_PLUGINS_DECLARED`-equivalent guard that its own doc comment claims to mirror ("mirrors `_devrail-host-bin`'s pattern exactly"). `_devrail-host-bin` skips its `docker create`/`docker cp`/`docker rm` dance entirely when no plugins are declared; `_test-services-host-bin` ran that same dance unconditionally for every consumer repo without a local `scripts/test-services.sh` (i.e. every template-repo consumer, the majority use case) — even when `test.services` was never set. Confirmed by hand: a fresh checkout with no `test.services` key still extracted the script and its cache file before this fix. **Fix:** added `DEVRAIL_TEST_SERVICES_PROBE`/`HAS_TEST_SERVICES_DECLARED` (same shape as `DEVRAIL_PLUGIN_PROBE`/`HAS_PLUGINS_DECLARED`) and guarded both `_test-services-host-bin`'s extraction and `_test-services-up`'s invocation branch on it. This surfaced a second-order risk while fixing it: skipping extraction meant `test:`'s cleanup trap could try to invoke an extracted script that was never extracted, so the trap was also changed from an unconditional if/else to an existence check (`[ -f .devrail/host-bin/scripts/test-services.sh ]`) — robust regardless of why the file might be missing, not coupled to the new guard's exact logic. Verified: extraction confirmed skipped end-to-end (`.devrail/host-bin/scripts/` never created) for a no-services fixture, `make test` still passes, and the full 19-assertion suite (which exercises the services-declared path where extraction must still happen) stays green.
+- [x] **M2** — `test.services` validation checked each entry was a *supported kind* but never checked for *duplicate kinds*. `services: [postgres:16, postgres:15]` would start two Postgres containers, but the `env` file (consumed via `docker run --env-file`, one `KEY=VALUE` per line, last occurrence wins for a repeated key) would end up with `DATABASE_URL` pointing only at the second container — the first would run for the entire test suite, fully billed in resources, completely unreachable via the one env var the feature exists to inject. Not a hypothetical: nothing in the schema said this was invalid, so a user declaring `services: [postgres:14, postgres:16]` while migrating a version pin, for instance, would hit this silently. **Fix:** added a dedup check to the existing full-list validation pass in `scripts/test-services.sh`, so a repeated kind fails fast (exit 2, clear message naming the kind) before any container starts — verified by hand against a fresh `postgres:16` + `postgres:15` fixture: exit 2, no container or network created.
+
+**LOW severity:**
+
+- [x] **L1** — Two things were true but undocumented: fixed Postgres/Redis credentials (`POSTGRES_PASSWORD=devrail`, no Redis auth) aren't configurable, and the state directory `.devrail/test-services/` isn't namespaced per invocation, so two `make test` runs started concurrently in the same checkout can race — the second run's stale-state self-healing could tear down the first run's still-active containers, not just a genuinely-abandoned one. Neither is a code defect (the credentials are fine precisely because the network is throwaway and unshared; the concurrency assumption matches the rest of the Makefile's existing host-side caching, none of which is lock-protected either), but a reader hitting either wasn't told it was expected. **Fix:** added both as explicit notes to `standards/devrail-yml-schema.md`'s "Ephemeral test services" section — the credential note as a design-rationale sentence, the concurrency note as a "Known limitation" paragraph naming the failure mode and the existing serialized-`make test`-per-checkout assumption it inherits.
+
+### Discrepancy check (git vs. story File List)
+
+No discrepancies in the original implementation commit (`1eba31a`). The review-fix pass's changes (`Makefile`, `scripts/test-services.sh` in dev-toolchain; `standards/devrail-yml-schema.md` in development-standards) are new, uncommitted-as-of-this-writing changes, reflected in the updated File List above and staged for a follow-up commit on the same branches (`feat/52-test-services`, `feat/15-4-create-story`) per this epic's established pattern.
+
+### Action Items
+
+All 3 findings resolved in this session — folded into the still-local `feat/52-test-services` (dev-toolchain) and `feat/15-4-create-story` (development-standards) branches, same pattern as Stories 15.1–15.3.
+
+- [x] [AI-Review][MED] M1: add `HAS_TEST_SERVICES_DECLARED` guard to `_test-services-host-bin`/`_test-services-up`, harden `test:`'s cleanup trap against the now-possible skipped-extraction case [`Makefile` → fixed]
+- [x] [AI-Review][MED] M2: reject duplicate `test.services` kinds during validation [`scripts/test-services.sh` → fixed]
+- [x] [AI-Review][LOW] L1: document fixed-credential rationale and the concurrent-invocation known limitation [`standards/devrail-yml-schema.md` → fixed]
