@@ -1164,9 +1164,10 @@ As a developer with a dependency-bearing project, I want `make test` to install 
 
 **Depends on:** 15.1
 
-### Story 15.4: `test.services` — Ephemeral Service Containers for Integration Tests (Backlog)
+### Story 15.4: `test.services` — Ephemeral Service Containers for Integration Tests
 
-**Status (placeholder):**
-Support `.devrail.yml` `test.services: [postgres:16, redis:7]` — DevRail starts throwaway containers on the test network and injects standard env (`DATABASE_URL`, `REDIS_URL`). Optionally autodetect from `docker-compose.test.yml`. Deferred from issue #52's proposal as a distinct, larger piece of work (container orchestration, not just dependency install).
+**Status:** ready-for-dev — see `_bmad-output/implementation-artifacts/15-4-test-services-ephemeral-service-containers.md`
+
+**Design finalized during story creation (2026-07-26):** the toolchain container has no `docker` CLI and no `/var/run/docker.sock` mount, ruling out in-container orchestration (which would require socket-mounting — a real privilege-escalation surface). Orchestration happens host-side instead, mirroring the existing `_extended-image` host-side-prerequisite pattern and feeding into the existing `docker_network`/`env` (issue #48) plumbing via two new recursively-expanded Make variables folded into the shared `DOCKER_RUN` macro. Every step (network create, service start, readiness wait, cross-container connectivity, cleanup) was hand-verified working for both Postgres and Redis before any AC was written. Scoped to Postgres/Redis only — `docker-compose.test.yml` autodetection explicitly deferred.
 
 **Depends on:** 15.2
