@@ -205,14 +205,34 @@ projects:
 
 - **`install`** (string, optional) — a shell command that replaces autodetection entirely for every discovered project root of every declared language. Use this when autodetection can't infer your setup (e.g. a `poetry.lock`-based project, or an install step with extra flags).
 - **`setup`** (string, optional) — a shell command that runs after a successful install and before the test suite, for every discovered project root of every declared language (e.g. database migrations). No-op if absent.
-- **`services`** — **not implemented.** Ephemeral service containers (e.g. `services: [postgres:16, redis:7]`) for integration tests are a separate, larger piece of work tracked as a follow-up story. Do not add this key expecting it to do anything yet.
+- **`services`** (list of strings, optional) — ephemeral service containers started before `make test` and torn down afterward (success or failure). Currently supports `postgres:<tag>` (injects `DATABASE_URL=postgresql://postgres:devrail@<container>:5432/devrail_test`) and `redis:<tag>` (injects `REDIS_URL=redis://<container>:6379`) — any other image reference fails fast with a clear error rather than being silently skipped. See "Ephemeral test services" below for the full contract.
 
 **Validation rules:**
 
 - `install` and `setup` should be valid shell command strings — neither is currently schema-validated; a malformed command simply fails at `make test` runtime with a normal shell error, the same as any other misconfigured `.devrail.yml` string value
 - A failed install or setup step fails `make test` immediately for that project root — the test suite does not run against a broken/partial install
+- `services` entries must be `postgres:<tag>` or `redis:<tag>` — anything else fails `make test` immediately (exit 2), before any container is started
+- `services` and the top-level `docker_network` key are **mutually exclusive** — both attempt to set `docker run`'s `--network` flag for the `test` target, and only one can win; declaring both fails fast with a clear error rather than silently picking one
 
-**Example:**
+**Ephemeral test services (`test.services`):**
+
+Orchestration happens entirely on the **host** (never inside the toolchain container, which has no `docker` CLI or `/var/run/docker.sock` access — deliberately, to avoid the privilege-escalation surface that would create). Before `make test` runs, DevRail creates a throwaway Docker network, starts each declared service container attached to it, and waits for the service's own readiness check (`pg_isready` for Postgres, `redis-cli ping` for Redis — not just "the TCP port is open"). After the test suite finishes (pass or fail), every service container and the network are removed.
+
+A process killed with `SIGKILL` mid-run (a shell trap cannot intercept `SIGKILL`) can leave orphaned containers/network behind — the *next* `make test` invocation detects this automatically and cleans up before starting fresh, so orphans don't accumulate indefinitely, but they can persist between the kill and the next run.
+
+`docker-compose.test.yml` autodetection is not implemented and not planned as part of this feature — it's a distinct scope (parsing and translating an entirely different config format) that would be its own follow-up if ever pursued.
+
+**Examples:**
+
+```yaml
+languages:
+  - python
+
+test:
+  services:
+    - postgres:16
+    - redis:7
+```
 
 ```yaml
 languages:
@@ -611,5 +631,5 @@ All tools consuming `.devrail.yml` follow standard DevRail exit codes:
 | `fail_fast` | boolean | No | `false` | Stop on first failure |
 | `log_format` | string | No | `json` | Output format (`json` or `human`) |
 | `projects` | list of mappings | No | `[]` | Override autodetected per-language project roots (Python/JS monorepos) |
-| `test` | mapping | No | `{}` | Override dependency install (`install`) and pre-test setup (`setup`) for `make test` |
+| `test` | mapping | No | `{}` | Override dependency install (`install`) and pre-test setup (`setup`); start ephemeral Postgres/Redis containers (`services`) for `make test` |
 | `<language>` | mapping | No | -- | Per-language tool overrides |

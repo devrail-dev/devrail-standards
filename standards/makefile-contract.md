@@ -334,7 +334,9 @@ For Python, JavaScript/TypeScript, Go, and Rust, `_lint`/`_format`/`_fix`/`_test
 
 ### `test`
 
-`_test` installs a project's own dependencies (Python via `uv`/`pip`, JS/TS via `npm` — autodetected from lockfiles in each root discovered per `projects` above) before running `pytest`/`vitest`, and runs an optional setup command afterward. A failed install or setup fails `_test` immediately for that root — the test suite never runs against a broken install. See [`devrail-yml-schema.md` § `test`](devrail-yml-schema.md#test) for the autodetection rules and the `install`/`setup` override keys.
+`_test` installs a project's own dependencies (Python via `uv`/`pip`, JS/TS via `npm` — autodetected from lockfiles in each root discovered per `projects` above) before running `pytest`/`vitest`, and runs an optional setup command afterward. A failed install or setup fails `_test` immediately for that root — the test suite never runs against a broken install.
+
+The public `test` target additionally has a **host-side** prerequisite, `_test-services-up`, that starts any `test.services` (ephemeral Postgres/Redis containers) before delegating into the container, and a cleanup trap that tears them down when the container run finishes — success or failure. This is the one piece of the `test` target that runs outside the container: the toolchain container has no `docker` CLI or socket access, deliberately, so container/network orchestration happens on the host, the same way `_extended-image` builds the project-local plugin image on the host before `check`/`lint`/etc. delegate in. A true no-op (single `yq` read, nothing else) when `test.services` isn't declared. See [`devrail-yml-schema.md` § `test`](devrail-yml-schema.md#test) for the autodetection rules and the `install`/`setup`/`services` override keys.
 
 ### Config Reading Pattern
 
@@ -356,7 +358,7 @@ _check-config:
 | `fail_fast` | Enables fail-fast error handling (overridden by `DEVRAIL_FAIL_FAST` env var) |
 | `log_format` | Switches output between JSON and human-readable (overridden by `DEVRAIL_LOG_FORMAT` env var) |
 | `projects` | Overrides per-language project-root autodetection (Python/JS) used by `_lint`/`_format`/`_fix`/`_test`/`_security` for cwd resolution |
-| `test` | Overrides autodetected dependency install (`install`) and adds pre-test setup (`setup`) in `_test` |
+| `test` | Overrides autodetected dependency install (`install`) and adds pre-test setup (`setup`) in `_test`; starts ephemeral Postgres/Redis containers (`services`), host-side, before `test` |
 | `<language>` overrides | Customizes tool selection for a specific language |
 
 For the complete `.devrail.yml` schema, see [`devrail-yml-schema.md`](devrail-yml-schema.md).

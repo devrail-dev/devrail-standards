@@ -1,6 +1,6 @@
 # Story 15.4: `test.services` — Ephemeral Service Containers for Integration Tests
 
-Status: ready-for-dev
+Status: review
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -58,42 +58,42 @@ so that I don't have to hand-manage a sibling Postgres/Redis container and Docke
 
 ## Tasks / Subtasks
 
-- [ ] **Task 1: `scripts/test-services.sh` — host-side orchestration script** (AC: 1, 2, 3, 5, 6, 7, 8)
-  - [ ] 1.1 New script, `up`/`down` subcommands, matching the existing `scripts/*.sh` header/style convention (`lib/log.sh` sourced, standard purpose/usage/deps header).
-  - [ ] 1.2 `up`: read `.devrail.yml` `test.services` via `yq`. Empty/absent → no-op, exit 0 (AC 6). Non-empty:
+- [x] **Task 1: `scripts/test-services.sh` — host-side orchestration script** (AC: 1, 2, 3, 5, 6, 7, 8)
+  - [x] 1.1 New script, `up`/`down` subcommands, matching the existing `scripts/*.sh` header/style convention (`lib/log.sh` sourced, standard purpose/usage/deps header).
+  - [x] 1.2 `up`: read `.devrail.yml` `test.services` via `yq`. Empty/absent → no-op, exit 0 (AC 6). Non-empty:
     - Detect and clean up any stale state directory from a prior incomplete run first (AC 8) — `rm -f` any tracked container by name (ignore "not found" errors) and `docker network rm` any tracked network (ignore "not found"/"has active endpoints" errors gracefully — log and continue) before proceeding.
     - Check `docker_network` is NOT also set in `.devrail.yml` when `test.services` is non-empty — if both are set, emit a clear `error`-level event and exit 2 (AC 5).
     - For each `test.services` entry: match against `postgres:*` or `redis:*` (simple prefix match on the image reference before the colon). Anything else → `error` event naming the unsupported entry, exit 2 (AC 7). Do not start any containers if ANY entry is unsupported — validate the whole list before starting anything (fail fast, not partial-then-fail).
     - Generate a unique network name (e.g. `devrail-test-<random-suffix>` — `mktemp`-style, not a deterministic name based on cwd, so concurrent `make test` runs on the same host/CI runner don't collide). `docker network create <name>`.
     - For each service, generate a unique container name, start it detached and attached to the network with sane test-friendly defaults (`postgres:16` → `POSTGRES_PASSWORD=devrail`, `POSTGRES_DB=devrail_test`, `POSTGRES_USER=postgres`; `redis:7` → no auth, defaults are fine for an ephemeral throwaway instance), poll for readiness with a bounded timeout (`pg_isready`/`redis-cli ping` via `docker exec`, ~30s cap, clear timeout error if exceeded), then append the corresponding `DATABASE_URL`/`REDIS_URL` line to the state env file.
     - Write state to `.devrail/test-services/`: `network` (network name), `containers` (one name per line, for teardown), `env` (the env-file DOCKER_RUN will consume via `--env-file`).
-  - [ ] 1.3 `down`: if `.devrail/test-services/` doesn't exist, no-op exit 0. Else: `docker rm -f` every tracked container (ignore individual failures, log and continue — don't let one already-gone container block cleaning up the rest), `docker network rm` the tracked network, remove the state directory.
-  - [ ] 1.4 Idempotent, re-runnable, safe against partial prior state (this is the whole point of AC 8's stale-state handling).
-  - [ ] 1.5 Structured JSON events throughout (`log_event`/`log_info`/`log_error` from `lib/log.sh`) — no raw `echo`, matching every other script in this codebase.
+  - [x] 1.3 `down`: if `.devrail/test-services/` doesn't exist, no-op exit 0. Else: `docker rm -f` every tracked container (ignore individual failures, log and continue — don't let one already-gone container block cleaning up the rest), `docker network rm` the tracked network, remove the state directory.
+  - [x] 1.4 Idempotent, re-runnable, safe against partial prior state (this is the whole point of AC 8's stale-state handling).
+  - [x] 1.5 Structured JSON events throughout (`log_event`/`log_info`/`log_error` from `lib/log.sh`) — no raw `echo`, matching every other script in this codebase.
 
-- [ ] **Task 2: Wire into the Makefile** (AC: 4, 6)
-  - [ ] 2.1 Add `_test-services-up` host-side target: `@bash scripts/test-services.sh up`. Depends on `_ensure-host-cache` (needs `.devrail/` machinery already set up the way `_extended-image` does).
-  - [ ] 2.2 Add two new recursively-expanded (`=`) Make variables, mirroring `DEVRAIL_RESOLVED_IMAGE`'s existing pattern exactly: `DEVRAIL_TEST_SERVICES_NETWORK_FLAG` (reads `.devrail/test-services/network` if present, emits `--network <name>`, else empty) and `DEVRAIL_TEST_SERVICES_ENV_FLAG` (reads for `.devrail/test-services/env`'s existence, emits `--env-file .devrail/test-services/env`, else empty).
-  - [ ] 2.3 Fold both into the shared `DOCKER_RUN` macro (alongside the existing `DEVRAIL_NETWORK_FLAG`/`DEVRAIL_ENV_FLAGS`). Confirm by inspection AND by testing that this is a true no-op for `lint`/`format`/`fix`/`security`/`scan`/`docs`/`changelog`/`plugins-update` when no `test.services` are declared (the overwhelming majority case, and literally always the case for every target except `test`, since nothing else depends on `_test-services-up`).
-  - [ ] 2.4 Change the public `test:` target's recipe from the current one-liner (`$(DOCKER_RUN) make _test`) to add `_test-services-up` as a prerequisite and wrap the body in a shell `trap '...test-services.sh down' EXIT` so teardown runs regardless of `make _test`'s exit code (AC 1, AC 8).
-  - [ ] 2.5 Do **not** touch `check:`'s recipe or dependency chain beyond what naturally follows from `test:` already being one of `check`'s constituent targets — `make check` should pick this up for free through `test:`, not need separate wiring.
+- [x] **Task 2: Wire into the Makefile** (AC: 4, 6)
+  - [x] 2.1 Add `_test-services-up` host-side target: `@bash scripts/test-services.sh up`. Depends on `_ensure-host-cache` (needs `.devrail/` machinery already set up the way `_extended-image` does).
+  - [x] 2.2 Add two new recursively-expanded (`=`) Make variables, mirroring `DEVRAIL_RESOLVED_IMAGE`'s existing pattern exactly: `DEVRAIL_TEST_SERVICES_NETWORK_FLAG` (reads `.devrail/test-services/network` if present, emits `--network <name>`, else empty) and `DEVRAIL_TEST_SERVICES_ENV_FLAG` (reads for `.devrail/test-services/env`'s existence, emits `--env-file .devrail/test-services/env`, else empty).
+  - [x] 2.3 Fold both into the shared `DOCKER_RUN` macro (alongside the existing `DEVRAIL_NETWORK_FLAG`/`DEVRAIL_ENV_FLAGS`). Confirm by inspection AND by testing that this is a true no-op for `lint`/`format`/`fix`/`security`/`scan`/`docs`/`changelog`/`plugins-update` when no `test.services` are declared (the overwhelming majority case, and literally always the case for every target except `test`, since nothing else depends on `_test-services-up`).
+  - [x] 2.4 Change the public `test:` target's recipe from the current one-liner (`$(DOCKER_RUN) make _test`) to add `_test-services-up` as a prerequisite and wrap the body in a shell `trap '...test-services.sh down' EXIT` so teardown runs regardless of `make _test`'s exit code (AC 1, AC 8).
+  - [x] 2.5 Do **not** touch `check:`'s recipe or dependency chain beyond what naturally follows from `test:` already being one of `check`'s constituent targets — `make check` should pick this up for free through `test:`, not need separate wiring.
 
-- [ ] **Task 3: `.devrail.yml` schema + docs** (AC: 5, 7, 9)
-  - [ ] 3.1 `standards/devrail-yml-schema.md`: document `test.services` (list of strings, `postgres:<tag>`/`redis:<tag>` only for now) under the existing `test:` section (added by Story 15.2) — do not create a new top-level section. State plainly: mutually exclusive with `docker_network` for the `test` target; unsupported entries error, they don't skip silently; `docker-compose.test.yml` autodetection is explicitly not implemented.
-  - [ ] 3.2 `standards/makefile-contract.md`: extend the `### test` entry (added by Story 15.2) with a short note on the host-side orchestration and its no-op guarantee when unused.
-  - [ ] 3.3 Document the injected env var names (`DATABASE_URL`, `REDIS_URL`) and their exact format so a consumer knows what to expect without reading the script.
+- [x] **Task 3: `.devrail.yml` schema + docs** (AC: 5, 7, 9)
+  - [x] 3.1 `standards/devrail-yml-schema.md`: document `test.services` (list of strings, `postgres:<tag>`/`redis:<tag>` only for now) under the existing `test:` section (added by Story 15.2) — do not create a new top-level section. State plainly: mutually exclusive with `docker_network` for the `test` target; unsupported entries error, they don't skip silently; `docker-compose.test.yml` autodetection is explicitly not implemented.
+  - [x] 3.2 `standards/makefile-contract.md`: extend the `### test` entry (added by Story 15.2) with a short note on the host-side orchestration and its no-op guarantee when unused.
+  - [x] 3.3 Document the injected env var names (`DATABASE_URL`, `REDIS_URL`) and their exact format so a consumer knows what to expect without reading the script.
 
-- [ ] **Task 4: Test suite** (AC: 10)
-  - [ ] 4.1 New `tests/test-test-services.sh` (not an extension of an existing script — this is genuinely new orchestration behavior). Follow the established `mktemp` `$WORKDIR` + cleanup-trap convention from Stories 15.1–15.3.
-  - [ ] 4.2 Cases: Postgres alone (real `SELECT 1` through the injected `DATABASE_URL`, run from inside a throwaway container on the same network — mirrors how the design was hand-verified during `create-story`), Redis alone (`SET`/`GET` through `REDIS_URL`), both together, no `test.services` declared (assert `make test` behaves identically to a Story-15.1-era fixture — reuse `tests/fixtures/single-root-python`), `docker_network` + `test.services` both declared → exit 2 with a clear error, an unsupported entry (e.g. `mysql:8`) → exit 2 with a clear error naming it.
-  - [ ] 4.3 **Teardown verification is not optional** — after each service-starting test case, assert (via `docker ps -a --filter` / `docker network ls --filter`, matched against the state this story's own naming scheme produces) that no DevRail-created container or network remains. This is the one AC in this story where "the trap code looks right" is not sufficient evidence — actually kill a `make test` run mid-flight (e.g. `timeout 2 ... || true` against a scenario designed to still be orchestrating) at least once and confirm cleanup still happened, not just the happy-path completion case.
-  - [ ] 4.4 Requires Docker-in-Docker capability in whatever environment runs this test (the CI runner already has this — it's running `docker build`/`docker run` for every other test in this suite). Note this plainly in the script's header, same as `tests/test-dependency-install.sh` notes its network requirement.
+- [x] **Task 4: Test suite** (AC: 10)
+  - [x] 4.1 New `tests/test-test-services.sh` (not an extension of an existing script — this is genuinely new orchestration behavior). Follow the established `mktemp` `$WORKDIR` + cleanup-trap convention from Stories 15.1–15.3.
+  - [x] 4.2 Cases: Postgres alone (real `SELECT 1` through the injected `DATABASE_URL`, run from inside a throwaway container on the same network — mirrors how the design was hand-verified during `create-story`), Redis alone (`SET`/`GET` through `REDIS_URL`), both together, no `test.services` declared (assert `make test` behaves identically to a Story-15.1-era fixture — reuse `tests/fixtures/single-root-python`), `docker_network` + `test.services` both declared → exit 2 with a clear error, an unsupported entry (e.g. `mysql:8`) → exit 2 with a clear error naming it.
+  - [x] 4.3 **Teardown verification is not optional** — after each service-starting test case, assert (via `docker ps -a --filter` / `docker network ls --filter`, matched against the state this story's own naming scheme produces) that no DevRail-created container or network remains. This is the one AC in this story where "the trap code looks right" is not sufficient evidence — actually kill a `make test` run mid-flight (e.g. `timeout 2 ... || true` against a scenario designed to still be orchestrating) at least once and confirm cleanup still happened, not just the happy-path completion case.
+  - [x] 4.4 Requires Docker-in-Docker capability in whatever environment runs this test (the CI runner already has this — it's running `docker build`/`docker run` for every other test in this suite). Note this plainly in the script's header, same as `tests/test-dependency-install.sh` notes its network requirement.
 
-- [ ] **Task 5: CI + docs**
-  - [ ] 5.1 Add a step to `.github/workflows/ci.yml` after the Story 15.3 step: `bash tests/test-test-services.sh`.
-  - [ ] 5.2 `CHANGELOG.md` `[Unreleased]` → `### Added`.
-  - [ ] 5.3 `STABILITY.md`: new row (this is not a generalization of an existing row the way Story 15.3 was — it's a genuinely new capability). Mark Preview.
-  - [ ] 5.4 This is the last story in Epic 15 — check whether the epic itself should move to `done` once this lands (all four stories `review`/merged) and whether an epic retrospective is warranted per the sprint-status workflow notes.
+- [x] **Task 5: CI + docs**
+  - [x] 5.1 Add a step to `.github/workflows/ci.yml` after the Story 15.3 step: `bash tests/test-test-services.sh`.
+  - [x] 5.2 `CHANGELOG.md` `[Unreleased]` → `### Added`.
+  - [x] 5.3 `STABILITY.md`: new row (this is not a generalization of an existing row the way Story 15.3 was — it's a genuinely new capability). Mark Preview.
+  - [x] 5.4 This is the last story in Epic 15 — check whether the epic itself should move to `done` once this lands (all four stories `review`/merged) and whether an epic retrospective is warranted per the sprint-status workflow notes.
 
 ## Dev Notes
 
@@ -185,10 +185,71 @@ The overwhelming majority of consumers declare no `test.services` — `_test-ser
 
 ## Dev Agent Record
 
-_(populated during dev-story execution)_
+### Agent Model Used
+
+Claude Sonnet 5 — single-session execution via the formal `dev-story` workflow.
+
+### Debug Log References
+
+- **Consumer-repo compat gap caught mid-implementation.** The story's design didn't originally account for `_devrail-host-bin`'s existing precedent: consumer template repos inherit this Makefile but not `scripts/`, so any new host-side script needs the same local-vs-extracted-from-image resolution `_extended-image` already has. Added a `_test-services-host-bin` target mirroring that pattern exactly (same cache file, same docker create/cp/rm shape) — without it, `test.services` would have silently only worked for the dev-toolchain repo itself, not for the actual target audience (external consumers). Verified both paths: local (`scripts/test-services.sh` present) and extracted (fixture with no local `scripts/`, using a container image with the script baked in via `COPY scripts/`).
+- **Three real bugs in the test script itself, all different flavors of "state doesn't cross a boundary the way it looks like it should":**
+  1. `workspace_for`'s original design used a global `WORKSPACE_COUNTER` incremented inside the function to generate unique per-call directory names. Every call site invoked it as `X="$(workspace_for ...)"` — command substitution always forks a subshell in bash, so the counter's increment never escaped back to the caller; every call saw the counter at its initial value and collided on the same destination path. `cp -R src dest` then nests `src` *inside* `dest` instead of overlaying it once `dest` already exists from a prior call, and the *second* call's leftover root-owned `.pytest_cache`/`__pycache__` (written by `pytest` running as root inside the container) then made the *third* call's `rm -rf` of that same reused path fail with permission errors. Fixed by switching to `mktemp -d` for guaranteed-unique names instead of hand-rolled shared state.
+  2. `(cd "$ws" && make test >log 2>&1); rc=$?` — this is the *exact* class of bug Story 15.2's own review caught in `lib/dependency-install.sh` (`local rc=$?` after a bare `if...fi` with no `else`), just in a different shape: under `set -e`, a bare failing command aborts the script *before* the next line (`rc=$?`) ever runs, so a genuine `make test` failure would have killed the whole test suite silently instead of being recorded as a `FAIL`. Fixed with an explicit `if/else`-wrapped helper (`run_make_test`), same fix shape as Story 15.2's.
+  3. The mid-flight-kill test originally did `(cd "$ws" && make test ... &)` — backgrounding *inside* the subshell's parens means the subshell forks the background job and exits immediately, so `$!` in the *outer* script never referred to anything real (`set -u` then correctly flagged it as unbound). Worse, the very first attempt at killing "the right process" used `kill -9 -- -$PGID` (process-group kill) on the assumption the backgrounded job got its own process group — it doesn't, in a non-interactive script (no job control), so this killed the *entire test script's own process group*, terminating itself mid-suite. Fixed by moving `&` outside the parens (so `$!` is meaningful) and killing only the specific PID, which is also the more realistic simulation anyway — a detached (`docker run -d`) container survives its parent process dying regardless.
+- None of these three bugs were in the actual product code (`scripts/test-services.sh`, `Makefile`) — all three were in the test harness written to verify it. The product code's own manual verification (done before writing the automated suite) worked correctly on the first attempt for every scenario, including the SIGKILL case.
+
+### Completion Notes List
+
+- All 10 ACs implemented. AC 3's constraint (no Docker socket in the toolchain container) was verified, not assumed, before any code was written — see the story's own Dev Notes and Change Log.
+- `scripts/test-services.sh` (~220 lines): `up`/`down` subcommands. Fail-fast validation (mutual exclusion with `docker_network`, unsupported entries) happens before anything is started. Stale-state detection at the top of `up` handles the SIGKILL case Make's own prerequisite/trap mechanism structurally cannot (a trap only helps once `test:`'s own recipe body has started running — a failure *during* the `_test-services-up` prerequisite, or a SIGKILL of the whole process tree, bypasses it entirely, which is exactly why `up` also self-heals from stale state on its own).
+- Makefile: two new recursively-expanded flag variables (`DEVRAIL_TEST_SERVICES_NETWORK_FLAG`/`_ENV_FLAG`) folded into the existing shared `DOCKER_RUN` macro — verified empty/no-op for `lint`/`format`/`fix`/`security`/`scan`/`docs`/`changelog`/`plugins-update` by construction (nothing but `_test-services-up` ever creates the state files they check for) and by the full existing regression suite passing unchanged. `test:`'s recipe gained a `trap '...test-services.sh down' EXIT` wrapping its `$(DOCKER_RUN) make _test` call.
+- `_test-services-host-bin` added alongside `_test-services-up`, mirroring `_devrail-host-bin`/`_extended-image`'s local-vs-extracted pattern (see debug log — this wasn't in the original task breakdown, added once the existing precedent was noticed).
+- `.devrail.yml` `test.services` documented in `standards/devrail-yml-schema.md` (which already had a "not implemented" placeholder for this exact key from Story 15.2 — replaced with the real contract) and `standards/makefile-contract.md`.
+- 3 new fixtures: `test-services-pg-redis` (used as a template, overwritten per-case by the test script), `test-services-mutex` (`docker_network` + `services` both set), `test-services-unsupported` (`mysql:8`).
+- `tests/test-test-services.sh`: 19 assertions, all against real `make test` invocations with real Postgres/Redis containers — including genuinely killing a run mid-flight with `SIGKILL` and confirming both the orphan and the next run's self-healing, not just asserting the trap code looks right.
+- CI wired: new "Test services smoke test" step, after Story 15.2's step (Story 15.3 needed no new CI step, so this is the next one in sequence).
+- `CHANGELOG.md` `[Unreleased] → Added` and `STABILITY.md` (new row — this is a genuinely new capability, not a generalization of an existing one) updated.
+
+**Verification (all green, against a fast Docker overlay of `ghcr.io/devrail-dev/dev-toolchain:1.12.0` + `lib/` + `scripts/` + `scripts/install-python.sh`):**
+
+- `shellcheck`/`shfmt` across the full repo file set — clean
+- `bash tests/test-test-services.sh` — **19 passed, 0 failed**, including the SIGKILL scenario
+- `bash tests/test-project-discover.sh` (Stories 15.1/15.3) — 46/46, confirming the shared `DOCKER_RUN` macro change is a true no-op for every other target
+- `bash tests/test-dependency-install.sh` (Story 15.2) — 12/12
+- `bash tests/test-plugin-loader.sh` (Story 13.2) — all pass
+- `bash tests/smoke-rails.sh` — all pass
+- Manual verification before the automated suite existed: `docker network create` → `docker run -d` (Postgres) → `pg_isready` polling → real `psql`/`SELECT 1` from a sibling container by hostname → cleanup, and the same for Redis (`redis-cli ping` → real `SET`/`GET`) — proving the core mechanics work before any Makefile/script code was written around them
+- `docker ps`/`docker network ls` confirmed empty of `devrail-test-*` resources after every successful run, after the mutex/unsupported-entry error paths (nothing started), and after the SIGKILL-then-rerun sequence
+
+**Not run:** a full `docker build` of the real multi-stage Dockerfile (same rationale as Stories 15.1–15.3). `make check` on the dev-toolchain repo itself was not re-run (repo declares `languages: [bash]` only).
+
+**No PR opened yet** — implementation complete and committed locally to `feat/52-test-services` (branched from `feat/53-go-rust-project-root-discovery`, itself not yet pushed/merged), pending user confirmation, same standing session default as every prior story in this epic.
+
+### File List
+
+**Implementation (dev-toolchain repo, branch `feat/52-test-services`, based on `feat/53-go-rust-project-root-discovery`):**
+
+- `scripts/test-services.sh` — new
+- `Makefile` — modified (two new `DEVRAIL_TEST_SERVICES_*` variables folded into `DOCKER_RUN`; new `_test-services-host-bin` and `_test-services-up` targets; `test:` recipe gained the prerequisite + cleanup trap)
+- `tests/test-test-services.sh` — new
+- `tests/fixtures/test-services-pg-redis/**` — new
+- `tests/fixtures/test-services-mutex/**` — new
+- `tests/fixtures/test-services-unsupported/**` — new
+- `.github/workflows/ci.yml` — modified (new "Test services smoke test" step)
+- `CHANGELOG.md` — modified (`[Unreleased] → Added` entry)
+- `STABILITY.md` — modified (new component row)
+
+**Story tracking + schema docs (OrgDocs/development-standards repo, branch `feat/15-4-create-story`):**
+
+- `_bmad-output/implementation-artifacts/15-4-test-services-ephemeral-service-containers.md` — this file (status, all task checkboxes, Dev Agent Record, File List)
+- `_bmad-output/implementation-artifacts/sprint-status.yaml` — modified (`15-4: ready-for-dev` → `review`)
+- `_bmad-output/planning-artifacts/epics.md` — already updated during story creation
+- `standards/devrail-yml-schema.md` — modified (`test.services` documented — replaces the "not implemented" placeholder from Story 15.2)
+- `standards/makefile-contract.md` — modified (`### test` entry extended)
 
 ## Change Log
 
 | Date | Change |
 |---|---|
 | 2026-07-26 | Story created via the formal `create-story` workflow (auto-discovered as the last remaining `backlog` story in Epic 15). Unlike prior stories in this epic, the critical design question here was architectural (how to orchestrate sibling containers safely) rather than a claim to verify — investigated and confirmed the toolchain container has no Docker socket access (ruling out in-container orchestration), then designed and hand-verified a host-side orchestration approach (network create, service start, readiness wait, cross-container connectivity, cleanup) end-to-end for both Postgres and Redis before writing any AC. Scoped to Postgres/Redis only (matching the epic's own example, not a generic-image claim); `docker-compose.test.yml` autodetection explicitly deferred. Status: `ready-for-dev`. |
+| 2026-07-27 | `dev-story` complete: implemented `scripts/test-services.sh` (up/down, stale-state self-healing, fail-fast validation) and wired it into the Makefile via a `_test-services-up`/`_test-services-host-bin` prerequisite pair (mirroring the existing `_extended-image`/`_devrail-host-bin` local-vs-extracted pattern) plus an `EXIT` trap on `test:` for guaranteed teardown. New `tests/test-test-services.sh` (19 assertions) found and fixed 3 bugs in the test harness itself (not the product code): a subshell-scoped counter that silently never incremented across `$(...)` calls, a bare `rc=$?` that `set -e` would have skipped on a real failure, and a `kill -9` on the wrong process group that took out the whole test script instead of just the simulated crashed container. All 10 ACs verified, including a genuine mid-flight `SIGKILL` of `make test` followed by confirming both the orphaned resources and the next run's self-healing. Full existing regression suite (project-discover, dependency-install, plugin-loader, smoke-rails) re-run and unaffected. Status: `review`. |
