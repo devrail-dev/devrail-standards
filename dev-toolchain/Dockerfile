@@ -30,7 +30,7 @@ RUN go install mvdan.cc/gofumpt@latest
 RUN go install golang.org/x/vuln/cmd/govulncheck@latest
 
 # === Node.js base: provides Node runtime for JS/TS tooling ===
-FROM node:22-bookworm-slim AS node-base
+FROM node:25-bookworm-slim AS node-base
 
 # === Final stage ===
 FROM debian:bookworm-slim AS runtime
